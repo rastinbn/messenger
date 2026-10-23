@@ -66,6 +66,59 @@ foundation for running multiple API instances — but Socket.IO itself also need
 reaches sockets connected to *other* instances, not just the instance that received the emit. This
 is a required addition, not yet done, before running more than one API replica.
 
+## Deploying to Render
+
+Two services: the API (NestJS) and the web app (Next.js), plus a Postgres database and a Redis URL.
+
+**API service**
+
+| Setting | Value |
+|---|---|
+| Root directory | repository root (the monorepo, not `apps/api`) |
+| Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @messenger/api exec prisma generate && pnpm --filter @messenger/api build` |
+| Pre-deploy command | `pnpm --filter @messenger/api prisma:migrate:deploy` |
+| Start command | `pnpm --filter @messenger/api start:prod` |
+| Health check path | `/v1/health` |
+
+`start:prod` runs `node dist/main`, so `nest build` must emit `dist/main.js`. That is what
+`apps/api/tsconfig.build.json` pins with `rootDir: ./src` + `include: ["src/**/*.ts"]`; without it,
+tsc takes the common root of `src/` *and* `prisma/` and emits `dist/src/main.js`, and the service
+crashes on boot with `Cannot find module '/opt/render/project/src/apps/api/dist/main'`.
+
+Required environment variables on the API service:
+
+- `DATABASE_URL` — from the Render Postgres instance (internal connection string).
+- `REDIS_URL` — Render no longer provisions Redis for new accounts; use Upstash/Redis Cloud and use
+  the TLS URL (`rediss://…`). The app only needs `SET`/`GET`/`DEL` + expiry.
+- `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` — 32+ random characters, different from each other.
+- `CORS_ORIGINS` — the deployed web origin, e.g. `https://messenger-web.onrender.com`
+  (comma-separated for several; no wildcards).
+- `APP_URL` — same web origin (used in emails).
+- `PORT` — Render injects it; `main.ts` reads it, and Nest binds all interfaces.
+
+**Web service**
+
+| Setting | Value |
+|---|---|
+| Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter web build` |
+| Start command | `pnpm --filter web start` |
+| Env | `NEXT_PUBLIC_API_URL=https://<api-service>.onrender.com` |
+
+`NEXT_PUBLIC_*` is baked in at **build** time, so changing it requires a redeploy, and the API's
+`CORS_ORIGINS` must contain the web origin or every request fails in the browser.
+
+**Gotchas**
+
+- **Uploads are ephemeral.** `MEDIA_UPLOAD_DIR` points at the instance disk, which is wiped on every
+  deploy. Either attach a Render disk and set `MEDIA_UPLOAD_DIR` to its mount path, or move to S3/R2
+  (see the media-storage section above).
+- **Free instances spin down** after idle time; the first request then takes ~30s and Socket.IO
+  reconnects on its own.
+- **Migrations run in the pre-deploy step**, never from application startup (see above) — otherwise
+  every instance would race to migrate.
+- WebSocket upgrades pass through Render's proxy on the same port as HTTP, so no extra config is
+  needed for Socket.IO.
+
 ## Process / infrastructure
 
 Not opinionated by this repo — deploy the NestJS app (`apps/api`) as a standard Node.js process

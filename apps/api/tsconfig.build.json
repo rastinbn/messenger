@@ -1,4 +1,15 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Without rootDir, tsc derives the common root of every compiled file — and
+    // because prisma/seed.ts sits next to src/, the build emitted dist/src/main.js
+    // and dist/prisma/*. `node dist/main` then failed on Render with MODULE_NOT_FOUND.
+    "rootDir": "./src",
+    // Keep the incremental cache inside dist: `nest build` wipes dist first, so
+    // the cache can never claim "up to date" while the emitted files are gone
+    // (which otherwise yields an empty dist and the same MODULE_NOT_FOUND).
+    "tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo"
+  },
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
 }
