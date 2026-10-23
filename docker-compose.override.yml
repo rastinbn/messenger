@@ -1,0 +1,15 @@
+# Local override (auto-loaded by `docker compose`).
+#
+# Ports 5432 and 6379 were already taken by another project on this machine,
+# so the messenger stack is published on 5452 / 6389 instead.
+# apps/api/.env must point at these ports:
+#   DATABASE_URL="postgresql://messenger:messenger@localhost:5452/messenger?schema=public"
+#   REDIS_URL="redis://localhost:6389"
+services:
+  postgres:
+    ports: !override
+      - "5452:5432"
+
+  redis:
+    ports: !override
+      - "6389:6379"

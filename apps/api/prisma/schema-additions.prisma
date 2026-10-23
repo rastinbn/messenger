@@ -1,0 +1,48 @@
+// ============================================================
+// ADD THESE TO YOUR EXISTING schema.prisma — do not replace the
+// whole file, just merge these in (see integration guide).
+// ============================================================
+
+// --- On the existing `User` model, add this one field: ---
+//   emailVerifiedAt DateTime?
+//
+// Full example of where it goes (don't duplicate other fields):
+//
+// model User {
+//   ...
+//   statusMessage   String?
+//   emailVerifiedAt DateTime?   <-- ADD THIS LINE
+//   createdAt       DateTime @default(now())
+//   ...
+//   emailVerificationTokens EmailVerificationToken[]   <-- ADD THIS RELATION
+//   magicLinkTokens         MagicLinkToken[]           <-- ADD THIS RELATION
+//   ...
+// }
+
+// --- Add these two new models anywhere in the file: ---
+
+model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+model MagicLinkToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("magic_link_tokens")
+}

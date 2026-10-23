@@ -1,0 +1,15 @@
+// ============================================================
+// ADD these entries to apps/api/package.json (merge into the
+// existing "dependencies" / "devDependencies" objects — don't
+// replace the whole file).
+// ============================================================
+
+"dependencies": {
+  // ...your existing dependencies stay as-is, just add:
+  "nodemailer": "^6.9.16"
+},
+
+"devDependencies": {
+  // ...your existing devDependencies stay as-is, just add:
+  "@types/nodemailer": "^6.4.17"
+}

@@ -1,0 +1,24 @@
+// ============================================================
+// ADD THESE to your existing schema.prisma (merge, don't replace)
+// ============================================================
+
+// --- New enum, add anywhere near the other enums: ---
+enum SiteRole {
+  user
+  admin
+}
+
+// --- On the existing `User` model, add these two fields: ---
+//   siteRole    SiteRole  @default(user)
+//   suspendedAt DateTime?
+//
+// Full example of where they go:
+//
+// model User {
+//   ...
+//   emailVerifiedAt DateTime?
+//   siteRole        SiteRole  @default(user)   <-- ADD THIS LINE
+//   suspendedAt     DateTime?                  <-- ADD THIS LINE
+//   createdAt       DateTime @default(now())
+//   ...
+// }

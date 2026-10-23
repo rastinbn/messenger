@@ -1,0 +1,237 @@
+// Messenger — Prisma schema
+// Mirrors the shapes defined in packages/shared-types (User, Conversation,
+// Message, Attachment, Notification) so REST/DTO mapping stays a thin
+// translation layer rather than a redesign of the data model.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus {
+  online
+  away
+  offline
+  dnd
+}
+
+enum ConversationType {
+  direct
+  group
+}
+
+enum ConversationRole {
+  owner
+  admin
+  member
+}
+
+enum MessageStatus {
+  sending
+  sent
+  delivered
+  read
+  failed
+}
+enum SiteRole {
+  user
+  admin
+}
+
+enum AttachmentType {
+  image
+  file
+}
+
+enum NotificationType {
+  message
+  mention
+  friend_request
+  system
+}
+
+enum ContactStatus {
+  pending
+  accepted
+}
+
+model User {
+  id            String     @id @default(uuid())
+  email         String     @unique
+  username      String     @unique
+  passwordHash  String
+  displayName   String
+  avatarUrl     String?
+  status        UserStatus @default(offline)
+  statusMessage String?
+  emailVerifiedAt DateTime?
+createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  magicLinkTokens         MagicLinkToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  siteRole    SiteRole  @default(user)
+  suspendedAt DateTime?
+
+  refreshTokens        RefreshToken[]
+  conversations        ConversationParticipant[]
+  messages              Message[]
+  notifications         Notification[]
+  attachmentsUploaded   Attachment[]
+
+  contactsInitiated ContactLink[] @relation("ContactInitiator")
+  contactsReceived  ContactLink[] @relation("ContactRecipient")
+
+  @@map("users")
+}
+
+/// Rotated, hashed refresh tokens — never store the raw token.
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model ContactLink {
+  id            String        @id @default(uuid())
+  initiatorId   String
+  initiator     User          @relation("ContactInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
+  recipientId   String
+  recipient     User          @relation("ContactRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  status        ContactStatus @default(accepted) // Phase 1 UI has no request/accept flow yet; defaults to accepted.
+  createdAt     DateTime      @default(now())
+
+  @@unique([initiatorId, recipientId])
+  @@index([recipientId])
+  @@map("contact_links")
+}
+
+model Conversation {
+  id        String           @id @default(uuid())
+  type      ConversationType
+  name      String?
+  avatarUrl String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String           @id @default(uuid())
+  conversationId String
+  conversation   Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           ConversationRole @default(member)
+  lastReadAt     DateTime?
+  joinedAt       DateTime         @default(now())
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String        @id @default(uuid())
+  conversationId String
+  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content        String
+  status         MessageStatus @default(sent)
+  editedAt       DateTime?
+  createdAt      DateTime      @default(now())
+
+  // Replies — the quoted message. SetNull keeps a reply renderable when the
+  // original row is hard-deleted; soft deletes leave the row and render a
+  // tombstone instead.
+  replyToId String?
+  replyTo   Message?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   Message[] @relation("MessageReplies")
+
+  // A forwarded message is a copy in another conversation; the flag marks provenance.
+  forwarded Boolean @default(false)
+
+  // Soft delete: the row stays (so replies and pagination cursors remain valid),
+  // content/attachments are cleared, and the UI shows "this message was deleted".
+  deletedAt DateTime?
+
+  attachments Attachment[]
+
+  @@index([conversationId, createdAt])
+  @@index([replyToId])
+  @@map("messages")
+}
+
+model Attachment {
+  id         String         @id @default(uuid())
+  messageId  String?
+  message    Message?       @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  uploaderId String
+  uploader   User           @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  type       AttachmentType
+  url        String
+  fileName   String
+  mimeType   String
+  sizeBytes  Int
+  width      Int?
+  height     Int?
+  createdAt  DateTime       @default(now())
+
+  @@index([messageId])
+  @@map("attachments")
+}
+
+model Notification {
+  id                     String           @id @default(uuid())
+  userId                 String
+  user                   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type                   NotificationType
+  title                  String
+  body                   String
+  read                   Boolean          @default(false)
+  relatedConversationId  String?
+  createdAt              DateTime         @default(now())
+
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+model MagicLinkToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("magic_link_tokens")
+}

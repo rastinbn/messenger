@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+/*
+  Design tokens — see docs/design-system.md for rationale.
+  Dark-first messaging UI. Accent is reserved exclusively for unread/active
+  signal (the "ink stroke" device), never used decoratively elsewhere.
+*/
+:root {
+  --bg-base: #141417;
+  --bg-surface: #1c1c21;
+  --bg-elevated: #26262e;
+  --bg-hover: #2e2e37;
+
+  --border-subtle: #2e2e37;
+  --border-default: #38383f;
+
+  --text-primary: #ededf0;
+  --text-secondary: #b4b4bd;
+  --text-muted: #8b8b96;
+
+  --accent-signal: #5b8cff;
+  --accent-signal-dim: #3a5cc4;
+
+  --status-online: #4ade80;
+  --status-away: #facc15;
+  --status-dnd: #f87171;
+  --status-offline: #57575f;
+
+  --danger: #f36969;
+  --success: #4ade80;
+
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+
+  /* Scrollbars — one quiet, theme-aware colour per theme. Chromium does not
+     repaint ::-webkit-scrollbar-thumb on :hover, so no hover state here. */
+  --scrollbar-thumb: #47474f;
+  --scrollbar-track: transparent;
+}
+
+/* Light mode override — dark is the primary/default experience for this product,
+   but light mode is supported per requirements. */
+:root[data-theme="light"] {
+  --bg-base: #f7f7f9;
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-hover: #f0f0f3;
+
+  --border-subtle: #e4e4e9;
+  --border-default: #d8d8e0;
+
+  --text-primary: #17171a;
+  --text-secondary: #4d4d57;
+  --text-muted: #7a7a85;
+
+  --accent-signal: #3a63dd;
+  --accent-signal-dim: #a9bdf5;
+
+  --scrollbar-thumb: #c6c6d0;
+}
+
+@theme inline {
+  --color-bg-base: var(--bg-base);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-bg-hover: var(--bg-hover);
+
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  --color-accent-signal: var(--accent-signal);
+  --color-accent-signal-dim: var(--accent-signal-dim);
+
+  --color-status-online: var(--status-online);
+  --color-status-away: var(--status-away);
+  --color-status-dnd: var(--status-dnd);
+  --color-status-offline: var(--status-offline);
+
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-full: var(--radius-full);
+}
+
+* {
+  border-color: var(--border-subtle);
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+/*
+  Scrollbars — thin, pill-shaped and theme-aware. Chromium/WebKit supports the
+  ::-webkit-* pseudo-elements, Firefox only the standard properties, so both are
+  declared; each engine ignores the other's block. The transparent 2px border +
+  background-clip keeps the thumb inset from the track edge so it reads as a
+  floating pill rather than a filled gutter.
+
+  The standard properties MUST stay behind the Firefox-only feature query:
+  Chromium 121+ also implements `scrollbar-width`/`scrollbar-color`, and when
+  either is set it ignores every ::-webkit-scrollbar rule below and paints its
+  own default scrollbar instead. `-moz-appearance` is unsupported by Chromium,
+  so it never sees these declarations.
+*/
+@supports (-moz-appearance: none) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb);
+  border: 2px solid transparent;
+  border-radius: var(--radius-full);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-button {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-button {
+  display: none;
+}
+
+/* Visible keyboard focus everywhere — accessibility floor, not optional. */
+:focus-visible {
+  outline: 2px solid var(--accent-signal);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes typingDot {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-2px); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes messageRise {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
