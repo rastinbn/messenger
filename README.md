@@ -28,7 +28,7 @@ Requires Node.js 22+ and pnpm 9+.
 
 ```bash
 pnpm install
-pnpm --filter web dev
+pnpm --filter @messenger/web dev
 ```
 
 Then open `http://localhost:3000`. Any email/password on login/register works.
@@ -43,7 +43,7 @@ pnpm --filter @messenger/api prisma:generate
 pnpm --filter @messenger/api prisma:migrate:dev
 pnpm --filter @messenger/api prisma:seed  # optional demo data — login: you@example.com / password123
 pnpm --filter @messenger/api dev          # API on :4000, docs at :4000/docs
-pnpm --filter web dev                     # frontend on :3000
+pnpm --filter @messenger/web dev                     # frontend on :3000
 ```
 
 See [`docs/deployment.md`](docs/deployment.md) for details, and [`docs/frontend.md`](docs/frontend.md)

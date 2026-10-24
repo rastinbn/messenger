@@ -12,7 +12,7 @@ cp apps/api/.env.example apps/api/.env   # fill in real secrets
 pnpm --filter @messenger/api prisma:migrate:dev
 pnpm --filter @messenger/api prisma:seed  # optional, demo data
 pnpm --filter @messenger/api dev          # API on :4000
-pnpm --filter web dev                     # frontend on :3000
+pnpm --filter @messenger/web dev                     # frontend on :3000
 ```
 
 Point the frontend at the real API by implementing `httpServices` behind the existing
@@ -100,8 +100,8 @@ Required environment variables on the API service:
 
 | Setting | Value |
 |---|---|
-| Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter web build` |
-| Start command | `pnpm --filter web start` |
+| Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @messenger/web build` |
+| Start command | `pnpm --filter @messenger/web start` |
 | Env | `NEXT_PUBLIC_API_URL=https://<api-service>.onrender.com` |
 
 `NEXT_PUBLIC_*` is baked in at **build** time, so changing it requires a redeploy, and the API's

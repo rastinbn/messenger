@@ -6,7 +6,7 @@ Status: **complete**, built entirely against mocked services — no backend, no 
 
 ```bash
 pnpm install
-pnpm --filter web dev
+pnpm --filter @messenger/web dev
 ```
 
 Visit `http://localhost:3000`. Any email/password on the login or register form works — the mock auth service accepts anything and signs you in as the seeded demo user ("You").
@@ -103,9 +103,9 @@ any environment with normal internet access.
 
 ## Verification performed
 
-- `pnpm --filter web typecheck` — clean.
-- `pnpm --filter web lint` — clean.
-- `pnpm --filter web build` — all 11 route segments compile and prerender/build successfully.
+- `pnpm --filter @messenger/web typecheck` — clean.
+- `pnpm --filter @messenger/web lint` — clean.
+- `pnpm --filter @messenger/web build` — all 11 route segments compile and prerender/build successfully.
 - Dev server smoke test — every page (`/`, `/login`, `/register`, `/chat`, `/chat/[id]`,
   `/contacts`, `/notifications`, `/search`, `/settings`, `/profile/[userId]`) returns HTTP 200 with
   no server-side errors; an unknown path correctly returns the custom 404 page.

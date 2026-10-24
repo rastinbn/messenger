@@ -3,12 +3,24 @@
 import { CircleCheck } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { useConfirmEmailVerification } from "@/hooks/useAuth";
 
+/**
+ * `useSearchParams()` opts a route into client-side rendering, which Next
+ * refuses to prerender unless it sits under a Suspense boundary.
+ */
 export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={null}>
+      <VerifyEmailContent />
+    </Suspense>
+  );
+}
+
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const confirm = useConfirmEmailVerification();

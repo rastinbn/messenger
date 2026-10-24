@@ -2,12 +2,25 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { useConsumeMagicLink } from "@/hooks/useAuth";
 
+/**
+ * `useSearchParams()` opts a route into client-side rendering, which Next
+ * refuses to prerender unless it sits under a Suspense boundary. The default
+ * export is the boundary; the actual page reads the token.
+ */
 export default function MagicLoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <MagicLoginContent />
+    </Suspense>
+  );
+}
+
+function MagicLoginContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
   const consume = useConsumeMagicLink();
