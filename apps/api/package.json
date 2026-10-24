@@ -21,6 +21,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:migrate:status": "prisma migrate status",
+    "db:check": "node scripts/check-db.mjs",
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts"
   },

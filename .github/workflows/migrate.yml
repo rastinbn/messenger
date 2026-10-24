@@ -1,0 +1,45 @@
+name: Migrate database
+
+# Migrations are a deploy step, not something the app does while booting: a slow
+# migration would otherwise delay/abort the boot, and two instances would race.
+# This workflow is deliberately manual, and the concurrency group makes sure a
+# second run can never start while one is still applying.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "migrate" to apply pending migrations to the production database'
+        required: true
+
+concurrency:
+  group: database-migrations
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    if: inputs.confirm == 'migrate'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Uses the pnpm version pinned by package.json#packageManager.
+      - run: corepack enable
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @messenger/api prisma:generate
+
+      - name: Apply migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm --filter @messenger/api prisma:migrate:deploy
+
+      - name: Verify schema
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: pnpm --filter @messenger/api db:check
