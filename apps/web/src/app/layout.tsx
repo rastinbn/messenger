@@ -5,6 +5,7 @@ import { QueryProvider } from "@/components/providers/QueryProvider";
 import { ServiceProvider } from "@/components/providers/ServiceProvider";
 import { ThemeInitializer } from "@/components/providers/ThemeInitializer";
 import { ChatPrefsInitializer } from "@/components/providers/ChatPrefsInitializer";
+import { LocaleProvider } from "@/components/providers/LocaleProvider";
 
 // NOTE: next/font/google requires network access to fonts.googleapis.com at
 // build time, which this dev sandbox's egress allowlist blocks. In any real
@@ -25,16 +26,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+    <html lang="fa" dir="rtl" className="h-full antialiased" suppressHydrationWarning>
       <body
         className="min-h-full flex flex-col bg-bg-base text-text-primary"
         suppressHydrationWarning
       >
-        <ThemeInitializer />
-        <ChatPrefsInitializer />
-        <QueryProvider>
-          <ServiceProvider>{children}</ServiceProvider>
-        </QueryProvider>
+        <LocaleProvider>
+          <ThemeInitializer />
+          <ChatPrefsInitializer />
+          <QueryProvider>
+            <ServiceProvider>{children}</ServiceProvider>
+          </QueryProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

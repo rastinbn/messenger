@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from "@/hooks/useNotifications";
 import { cn } from "@/lib/cn";
 import { formatRelativeDay } from "@/lib/formatTime";
+import { useLocale } from "@/components/providers/LocaleProvider";
 
 const ICONS: Record<string, LucideIcon> = {
   message: MessageSquare,
@@ -17,6 +18,7 @@ const ICONS: Record<string, LucideIcon> = {
 };
 
 export default function NotificationsPage() {
+  const { t } = useLocale();
   const { data: notifications, isLoading } = useNotifications();
   const markAllRead = useMarkAllNotificationsRead();
   const markRead = useMarkNotificationRead();
@@ -26,11 +28,11 @@ export default function NotificationsPage() {
       <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="font-display text-2xl mb-1">Notifications</h1>
-            <p className="text-text-secondary text-sm">Mentions, messages, and account activity.</p>
+            <h1 className="font-display text-2xl mb-1">{t("nav.notifications")}</h1>
+            <p className="text-text-secondary text-sm">{t("notifications.description")}</p>
           </div>
           <Button size="sm" variant="secondary" onClick={() => markAllRead.mutate()}>
-            Mark all read
+            {t("notifications.markAll")}
           </Button>
         </div>
 
@@ -43,7 +45,7 @@ export default function NotificationsPage() {
         )}
 
         {!isLoading && notifications?.length === 0 && (
-          <p className="text-sm text-text-muted text-center mt-10">You&apos;re all caught up.</p>
+          <p className="text-sm text-text-muted text-center mt-10">{t("notifications.empty")}</p>
         )}
 
         <ul className="flex flex-col divide-y divide-border-subtle">

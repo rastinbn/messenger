@@ -7,11 +7,13 @@ import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { LanguageToggle, useLocale } from "@/components/providers/LocaleProvider";
 import { useRegister } from "@/hooks/useAuth";
 import type { RegisterInput } from "@messenger/shared-types";
 
 export default function RegisterPage() {
   const registerUser = useRegister();
+  const { t } = useLocale();
   const {
     register,
     handleSubmit,
@@ -21,8 +23,9 @@ export default function RegisterPage() {
   return (
     <main className="flex-1 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
-        <h1 className="font-display text-2xl mb-1">Create your account</h1>
-        <p className="text-text-secondary text-sm mb-6">Takes about a minute.</p>
+        <div className="flex justify-end mb-5"><LanguageToggle /></div>
+        <h1 className="font-display text-2xl mb-1">{t("register.title")}</h1>
+        <p className="text-text-secondary text-sm mb-6">{t("register.description")}</p>
 
         <form
           className="flex flex-col gap-4"
@@ -30,19 +33,19 @@ export default function RegisterPage() {
           noValidate
         >
           <Input
-            label="Display name"
+            label={t("register.displayName")}
             placeholder="Ada Lovelace"
             error={errors.displayName?.message}
             {...register("displayName")}
           />
           <Input
-            label="Username"
+            label={t("register.username")}
             placeholder="ada"
             error={errors.username?.message}
             {...register("username")}
           />
           <Input
-            label="Email"
+            label={t("login.email")}
             type="email"
             autoComplete="email"
             placeholder="you@example.com"
@@ -50,29 +53,29 @@ export default function RegisterPage() {
             {...register("email")}
           />
           <Input
-            label="Password"
+            label={t("login.password")}
             type="password"
             autoComplete="new-password"
-            placeholder="At least 8 characters"
+            placeholder={t("register.passwordHint")}
             error={errors.password?.message}
             {...register("password")}
           />
 
           {registerUser.isError && (
             <p role="alert" className="text-sm text-danger">
-              Something went wrong. Please try again.
+              {t("login.error")}
             </p>
           )}
 
           <Button type="submit" isLoading={registerUser.isPending} className="w-full mt-1">
-            Create account
+            {t("register.submit")}
           </Button>
         </form>
 
         <p className="text-sm text-text-muted mt-6 text-center">
-          Already have an account?{" "}
+          {t("register.haveAccount")} {" "}
           <Link href="/login" className="text-accent-signal hover:underline">
-            Log in
+            {t("landing.login")}
           </Link>
         </p>
       </div>

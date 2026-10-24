@@ -24,8 +24,10 @@ import { useCurrentUser } from "@/hooks/useUsers";
 import { useServices } from "@/components/providers/ServiceProvider";
 import { ApiError } from "@/lib/api/http-client";
 import { useUiStore } from "@/stores/useUiStore";
+import { useLocale } from "@/components/providers/LocaleProvider";
 
 export default function ChatWindowPage() {
+  const { t } = useLocale();
   const params = useParams<{ conversationId: string }>();
   const conversationId = params.conversationId;
   const router = useRouter();
@@ -103,7 +105,7 @@ export default function ChatWindowPage() {
 
   const nameFor = (userId: string) =>
     conversation.participants.find((p) => p.id === userId)?.displayName ??
-    (userId === currentUser.id ? "You" : "Unknown");
+    (userId === currentUser.id ? t("chat.you") : t("chat.unknown"));
 
   return (
     <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
@@ -161,15 +163,15 @@ export default function ChatWindowPage() {
       <Modal
         isOpen={!!pendingDelete}
         onClose={() => setPendingDelete(null)}
-        title="Delete message?"
+        title={t("message.deleteTitle")}
         size="sm"
       >
         <p className="text-sm text-text-secondary">
-          This message will be deleted for everyone in this conversation. This cannot be undone.
+          {t("message.deleteHelp")}
         </p>
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="secondary" size="sm" onClick={() => setPendingDelete(null)}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             variant="danger"
@@ -183,7 +185,7 @@ export default function ChatWindowPage() {
               );
             }}
           >
-            Delete
+            {t("message.delete")}
           </Button>
         </div>
       </Modal>

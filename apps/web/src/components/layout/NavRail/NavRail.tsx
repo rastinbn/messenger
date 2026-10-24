@@ -8,15 +8,17 @@ import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/cn";
 import { useCurrentUser } from "@/hooks/useUsers";
 import { useNotifications } from "@/hooks/useNotifications";
+import { LanguageToggle, useLocale } from "@/components/providers/LocaleProvider";
 
-const NAV_ITEMS: { href: string; label: string; Icon: LucideIcon }[] = [
-  { href: "/chat", label: "Chats", Icon: MessageSquare },
-  { href: "/contacts", label: "Contacts", Icon: Users },
-  { href: "/search", label: "Search", Icon: Search },
-  { href: "/notifications", label: "Notifications", Icon: Bell }
+const NAV_ITEMS: { href: string; label: "nav.chats" | "nav.contacts" | "nav.search" | "nav.notifications"; Icon: LucideIcon }[] = [
+  { href: "/chat", label: "nav.chats", Icon: MessageSquare },
+  { href: "/contacts", label: "nav.contacts", Icon: Users },
+  { href: "/search", label: "nav.search", Icon: Search },
+  { href: "/notifications", label: "nav.notifications", Icon: Bell }
 ];
 
 export function NavRail() {
+  const { t } = useLocale();
   const pathname = usePathname();
   const { data: user } = useCurrentUser();
   const { data: notifications } = useNotifications();
@@ -24,7 +26,7 @@ export function NavRail() {
 
   return (
     <nav
-      aria-label="Primary"
+      aria-label={t("nav.primary")}
       className="hidden md:flex flex-col items-center justify-between w-16 shrink-0 bg-bg-surface border-r border-border-subtle py-4"
     >
       <div className="flex flex-col items-center gap-2">
@@ -34,7 +36,7 @@ export function NavRail() {
             <Link
               key={item.href}
               href={item.href}
-              aria-label={item.label}
+              aria-label={t(item.label)}
               aria-current={isActive ? "page" : undefined}
               className={cn(
                 "relative h-11 w-11 flex items-center justify-center rounded-[var(--radius-md)] transition-colors",
@@ -52,7 +54,7 @@ export function NavRail() {
         {user?.siteRole === "admin" && (
           <Link
             href="/admin"
-            aria-label="Admin panel"
+            aria-label={t("nav.adminPanel")}
             aria-current={pathname.startsWith("/admin") ? "page" : undefined}
             className={cn(
               "h-11 w-11 flex items-center justify-center rounded-[var(--radius-md)] transition-colors mt-1 border-t border-border-subtle pt-2",
@@ -67,10 +69,11 @@ export function NavRail() {
       </div>
 
       <div className="flex flex-col items-center gap-3">
-        <Link href="/settings" aria-label="Settings" className="text-text-muted hover:text-text-primary h-11 w-11 flex items-center justify-center rounded-[var(--radius-md)] hover:bg-bg-hover">
+        <LanguageToggle compact className="h-10 w-10 px-0" />
+        <Link href="/settings" aria-label={t("nav.settings")} className="text-text-muted hover:text-text-primary h-11 w-11 flex items-center justify-center rounded-[var(--radius-md)] hover:bg-bg-hover">
           <Settings className="h-5 w-5" strokeWidth={1.8} aria-hidden />
         </Link>
-        <Link href="/profile/me" aria-label="Your profile">
+        <Link href="/profile/me" aria-label={t("nav.profile")}>
           <Avatar name={user?.displayName ?? "You"} status={user?.status} size="sm" />
         </Link>
       </div>
