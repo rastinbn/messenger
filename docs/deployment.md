@@ -114,10 +114,49 @@ Required environment variables on the API service:
   (see the media-storage section above).
 - **Free instances spin down** after idle time; the first request then takes ~30s and Socket.IO
   reconnects on its own.
-- **Migrations run in the pre-deploy step**, never from application startup (see above) — otherwise
-  every instance would race to migrate.
+- **Migrations belong in a deploy step**, not in application startup (see above) — otherwise every
+  instance races to migrate. The single exception is the free single-instance plan, where the start
+  command is the only hook available.
 - WebSocket upgrades pass through Render's proxy on the same port as HTTP, so no extra config is
   needed for Socket.IO.
+
+### Free plan: applying migrations without a Shell
+
+The free plan has no Shell (and no pre-deploy command), so a fresh database starts empty and the
+first request fails with `The table public.users does not exist in the current database`. The
+migrations still have to run once — by hand, or from the start command.
+
+**Option A (recommended, one-off): run them from your machine.** Render Postgres is reachable from
+outside through its *external* connection string (Dashboard → the database → Connect → External
+Database URL). Point Prisma at it for this one command — the app's own `DATABASE_URL` in Render stays
+the internal one:
+
+```powershell
+$env:DATABASE_URL="postgresql://USER:PASSWORD@HOST/DBNAME?sslmode=require"
+pnpm --filter @messenger/api prisma:migrate:deploy
+```
+
+```bash
+DATABASE_URL="postgresql://USER:PASSWORD@HOST/DBNAME?sslmode=require" \
+  pnpm --filter @messenger/api prisma:migrate:deploy
+```
+
+A process environment variable wins over `apps/api/.env`, so the local database is left untouched.
+Add `?sslmode=require` if the connection is rejected over SSL.
+
+**Option B (automatic): migrate on boot.** Point the API's start command at
+
+```
+pnpm --filter @messenger/api start:prod:migrate
+```
+
+which runs `prisma migrate deploy` and then `node dist/main`. `migrate deploy` is idempotent, so a
+free instance that spins down and boots again is fine. It is only safe because the free plan runs a
+single instance — with more than one replica they would race, which is why the paid-plan guidance
+keeps migrations in the pre-deploy step.
+
+**Heads-up:** Render deletes free Postgres instances 30 days after creation, and free web services
+spin down after 15 minutes of idle time (the next request takes ~30s to wake them).
 
 ## Process / infrastructure
 
