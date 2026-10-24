@@ -31,10 +31,12 @@ username/credential fields — no protocol change needed on either end.
 
 **Client → server:**
 
-- `call:invite { conversationId }` — notify other conversation participants
-  a call is starting (they don't need to have joined anything yet).
+- `call:invite { conversationId, video }` — notify other conversation participants
+  a call is starting (they don't need to have joined anything yet). `video` carries
+  the call mode so a voice call is answered without turning the camera on.
 - `call:join { conversationId }` — join the call's signaling room.
 - `call:leave { conversationId }` — leave.
+- `call:decline { conversationId, toUserId }` — the callee refuses the call.
 - `call:signal { conversationId, toUserId, data }` — relay an opaque WebRTC
   offer/answer/ICE candidate to one specific peer. The server never inspects
   `data`.
@@ -43,44 +45,53 @@ username/credential fields — no protocol change needed on either end.
 
 **Server → client:**
 
-- `call:incoming { conversationId, fromUserId }` — sent to each other
-  participant's personal room when someone calls `call:invite`.
-- `call:participants { conversationId, participantIds }` — sent only to the
-  client that just joined, listing who's already in the call. The joining
-  client is responsible for initiating an `RTCPeerConnection` + offer toward
-  each of these.
-- `call:peer-joined { conversationId, userId }` — sent to everyone already in
-  the room when someone new joins. Existing participants initiate their own
-  offer toward the new joiner (so every pair ends up with exactly one
-  offerer, avoiding glare).
+- `call:incoming { conversationId, fromUserId, fromDisplayName, video }` — sent to
+  each other participant's personal room when someone calls `call:invite`.
+- `call:participants { conversationId, participantIds, participants, self }` — sent
+  only to the client that just joined, listing who's already in the call and their
+  display names. The joining client is responsible for initiating an
+  `RTCPeerConnection` + offer toward each of these.
+- `call:peer-joined { conversationId, userId, displayName }` — sent to everyone
+  already in the room when someone new joins.
 - `call:peer-left { conversationId, userId }` — clean up that peer's
   connection.
 - `call:signal { conversationId, fromUserId, data }` — the relayed
   offer/answer/ICE candidate.
 - `call:media-state { conversationId, userId, audioEnabled, videoEnabled }`.
+- `call:ended { conversationId, reason: "declined" | "ended" }` — the call is over
+  for everyone: the callee declined, or the last participant left (which also
+  releases anyone still ringing).
 
-## Client responsibility (see `apps/web/src/hooks/useCall.ts`)
+## Client responsibility (see `apps/web/src/lib/call/callEngine.ts`)
 
 The server does zero WebRTC — everything SDP/ICE-related happens
-peer-to-peer in the browser. The client hook is responsible for:
-1. Getting local media (`getUserMedia`).
+peer-to-peer in the browser. The client engine is responsible for:
+1. Getting local media (`getUserMedia`), falling back to audio-only when the
+   camera is unavailable.
 2. On `call:participants`, creating an `RTCPeerConnection` + offer for each
    existing participant.
-3. On `call:peer-joined`, creating an `RTCPeerConnection` and waiting for
-   their offer (per the glare-avoidance rule above — the *existing*
-   participant offers to the *new* one).
-4. Relaying local ICE candidates via `call:signal` as they're discovered.
-5. On `call:peer-left`/disconnect, tearing down that specific
-   `RTCPeerConnection` and removing its video tile.
+3. On `call:peer-joined`, waiting briefly for the joiner's offer and only
+   offering itself if none arrives (covers both sides joining at once).
+4. **Buffering ICE candidates** that arrive before the peer connection or its
+   remote description exists, then flushing them — dropping them was the main
+   reason calls failed to connect outside trivial LAN setups.
+5. Handling glare: if an offer arrives while we have a local offer, roll our
+   offer back instead of tearing the connection down.
+6. Re-negotiating when the camera is switched on mid-call (the track is added and
+   every peer gets a fresh offer).
+7. On `call:peer-left`/`call:ended`/disconnect, tearing down that peer (or the
+   whole call) and removing its tile.
+8. A 45 s ring timeout, so a call nobody answers cleans itself up.
 
 ## Known limitations (documented, not silently missing)
 
+- **STUN-only connectivity** (see above): behind symmetric NAT/corporate
+  firewalls a TURN server is still required; the call otherwise sits at
+  "connecting" and times out.
 - No call history/persistence — calls are purely ephemeral, in-memory state
   on the API instance handling the signaling. Restarting the API mid-call
   drops everyone (same category of limitation as `PresenceService` before a
   Socket.IO Redis adapter is added — see `docs/deployment.md`).
-- No ringing/decline UX beyond the raw `call:incoming` event — the frontend
-  decides how to present that (toast, banner, ringtone).
 - No screen sharing yet (same `RTCPeerConnection` plumbing could carry it —
   add a second track type, not a protocol change).
 - No recording.

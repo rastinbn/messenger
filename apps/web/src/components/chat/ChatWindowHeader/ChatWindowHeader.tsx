@@ -39,8 +39,11 @@ export function ChatWindowHeader({ conversation, currentUserId }: ChatWindowHead
         : other?.statusMessage ?? "Offline";
 
   async function startCall(video: boolean) {
-    await joinCall(conversation.id, video);
-    inviteToCall(conversation.id);
+    // Only invite once local media is actually running — otherwise the callee
+    // gets a call the caller can never join.
+    const joined = await joinCall(conversation.id, video);
+    if (!joined) return;
+    inviteToCall(conversation.id, video);
   }
 
   return (

@@ -83,7 +83,7 @@ export class CallsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const conversationId = this.socketCallMembership.get(socket.id);
     if (!conversationId) return;
     const authed = socket as AuthenticatedSocket;
-    this.leaveCall(authed, conversationId);
+    void this.leaveCall(authed, conversationId);
   }
 
   private reject(socket: Socket, reason: string): void {
@@ -96,7 +96,7 @@ export class CallsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage("call:invite")
   async handleInvite(
     @ConnectedSocket() socket: AuthenticatedSocket,
-    @MessageBody() body: { conversationId: string }
+    @MessageBody() body: { conversationId: string; video?: boolean }
   ): Promise<void> {
     await this.conversationsService.assertParticipant(body.conversationId, socket.data.userId);
 
@@ -107,13 +107,36 @@ export class CallsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       body.conversationId,
       socket.data.userId
     );
+    // The callee needs the caller's name for the incoming-call banner (a raw
+    // user id is not something you can show to a person) and the call mode, so
+    // a voice call isn't answered with the camera on.
+    const caller = conversation.participants.find(
+      (participant) => participant.userId === socket.data.userId
+    )?.user;
+
     for (const participant of conversation.participants) {
       if (participant.userId === socket.data.userId) continue;
       this.server.to(userRoom(participant.userId)).emit("call:incoming", {
         conversationId: body.conversationId,
-        fromUserId: socket.data.userId
+        fromUserId: socket.data.userId,
+        fromDisplayName: caller?.displayName ?? socket.data.username,
+        video: body.video ?? true
       });
     }
+  }
+
+  @SubscribeMessage("call:decline")
+  handleDecline(
+    @ConnectedSocket() socket: AuthenticatedSocket,
+    @MessageBody() body: { conversationId: string; toUserId: string }
+  ): void {
+    // Declining is a direct answer to the caller — without this the caller sat
+    // in an empty call until the ring timeout.
+    this.server.to(userRoom(body.toUserId)).emit("call:ended", {
+      conversationId: body.conversationId,
+      reason: "declined",
+      byUserId: socket.data.userId
+    });
   }
 
   @SubscribeMessage("call:join")
@@ -122,6 +145,16 @@ export class CallsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() body: { conversationId: string }
   ): Promise<void> {
     await this.conversationsService.assertParticipant(body.conversationId, socket.data.userId);
+
+    const conversation = await this.conversationsService.getForUser(
+      body.conversationId,
+      socket.data.userId
+    );
+    // Signaling peers need display names, not user ids: the call tiles render
+    // whatever they are handed, and a UUID makes a poor avatar label.
+    const displayNameOf = (userId: string) =>
+      conversation.participants.find((participant) => participant.userId === userId)?.user
+        .displayName ?? socket.data.username;
 
     const room = callRoom(body.conversationId);
     const existingParticipants = Array.from(
@@ -140,14 +173,20 @@ export class CallsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // connections to initiate (mesh: new joiner connects to everyone already present).
     socket.emit("call:participants", {
       conversationId: body.conversationId,
-      participantIds: existingParticipants
+      participantIds: existingParticipants,
+      participants: existingParticipants.map((userId) => ({
+        userId,
+        displayName: displayNameOf(userId)
+      })),
+      self: { userId: socket.data.userId, displayName: displayNameOf(socket.data.userId) }
     });
 
     // Tell everyone already in the call room that a new peer joined, so
     // *they* also initiate a connection toward the new joiner.
     socket.to(room).emit("call:peer-joined", {
       conversationId: body.conversationId,
-      userId: socket.data.userId
+      userId: socket.data.userId,
+      displayName: displayNameOf(socket.data.userId)
     });
 
     this.logger.log(`User ${socket.data.userId} joined call ${body.conversationId}`);
@@ -158,22 +197,44 @@ export class CallsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() socket: AuthenticatedSocket,
     @MessageBody() body: { conversationId: string }
   ): void {
-    this.leaveCall(socket, body.conversationId);
+    void this.leaveCall(socket, body.conversationId);
   }
 
-  private leaveCall(socket: AuthenticatedSocket, conversationId: string): void {
+  private async leaveCall(socket: AuthenticatedSocket, conversationId: string): Promise<void> {
     const room = callRoom(conversationId);
     socket.leave(room);
     this.socketCallMembership.delete(socket.id);
 
     const participants = this.activeCallParticipants.get(conversationId);
     participants?.delete(socket.data.userId);
-    if (participants && participants.size === 0) {
-      this.activeCallParticipants.delete(conversationId);
-    }
 
     this.server.to(room).emit("call:peer-left", { conversationId, userId: socket.data.userId });
+
+    if (!participants || participants.size === 0) {
+      this.activeCallParticipants.delete(conversationId);
+      // The room is empty: tell everyone who was invited (including people who
+      // never joined) that this call is over, so nobody is left staring at a
+      // "ringing" screen forever.
+      await this.notifyCallEnded(conversationId, socket.data.userId);
+    }
+
     this.logger.log(`User ${socket.data.userId} left call ${conversationId}`);
+  }
+
+  private async notifyCallEnded(conversationId: string, leftUserId: string): Promise<void> {
+    try {
+      const conversation = await this.conversationsService.getForUser(conversationId, leftUserId);
+      for (const participant of conversation.participants) {
+        this.server.to(userRoom(participant.userId)).emit("call:ended", {
+          conversationId,
+          reason: "ended"
+        });
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Could not notify call end for ${conversationId}: ${(error as Error).message}`
+      );
+    }
   }
 
   // --- WebRTC signaling relay -----------------------------------------------
