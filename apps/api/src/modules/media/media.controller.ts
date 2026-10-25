@@ -34,7 +34,15 @@ const ALLOWED_MIME_TYPES = new Set([
   "text/plain",
   "application/zip",
   "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  // Voice messages — MediaRecorder output varies by browser (opus in webm/ogg,
+  // or mp4 on Safari), so all of them have to be accepted.
+  "audio/webm",
+  "audio/ogg",
+  "audio/mp4",
+  "audio/mpeg",
+  "audio/wav",
+  "audio/x-m4a"
 ]);
 
 @ApiTags("media")

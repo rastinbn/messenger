@@ -3,6 +3,7 @@
 import type { Message } from "@messenger/shared-types";
 import { Check, CheckCheck, CircleAlert, Clock, Ellipsis, Forward, type LucideIcon } from "lucide-react";
 
+import { AudioCard } from "@/components/ui/AudioCard";
 import { ContextMenu } from "@/components/ui/ContextMenu";
 import { Dropdown, type DropdownItem } from "@/components/ui/Dropdown";
 import { FileCard } from "@/components/ui/FileCard";
@@ -88,8 +89,14 @@ export function ChatBubble({
           </div>
         )}
 
-        {message.attachments.map((att) =>
-          att.type === "image" ? (
+        {message.attachments.map((att) => {
+          // Voice messages are ordinary file attachments whose mime type is
+          // audio/*; render them as a player instead of a file chip.
+          if (att.mimeType.startsWith("audio/")) {
+            return <AudioCard key={att.id} url={att.url} fileName={att.fileName} isOwn={isOwn} />;
+          }
+
+          return att.type === "image" ? (
             <ImageCard
               key={att.id}
               fileName={att.fileName}
@@ -115,8 +122,8 @@ export function ChatBubble({
                 })
               }
             />
-          )
-        )}
+          );
+        })}
 
         {isDeleted ? (
           <div className="rounded-[var(--radius-lg)] border border-dashed border-border-default px-3.5 py-2 text-sm italic text-text-muted">

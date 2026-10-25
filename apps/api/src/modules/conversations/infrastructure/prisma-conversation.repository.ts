@@ -13,12 +13,26 @@ const conversationInclude = {
     where: { deletedAt: null },
     orderBy: { createdAt: 'desc' as const },
     take: 1,
+    // Needed to describe attachment-only messages (voice notes, photos, files)
+    // in the conversation list — their `content` is empty by design.
+    include: { attachments: { take: 1, select: { type: true, mimeType: true } } },
   },
 } satisfies Prisma.ConversationInclude;
 
 type ConversationRow = Prisma.ConversationGetPayload<{
   include: typeof conversationInclude;
 }>;
+
+/** One-line description of the newest message for the conversation list. */
+function describeMessage(message: ConversationRow['messages'][number]): string {
+  if (message.content) return message.content;
+
+  const attachment = message.attachments[0];
+  if (!attachment) return 'Message';
+  if (attachment.mimeType.startsWith('audio/')) return '🎤 Voice message';
+  if (attachment.type === 'image') return '📷 Photo';
+  return '📎 Attachment';
+}
 
 @Injectable()
 export class PrismaConversationRepository implements ConversationRepositoryPort {
@@ -62,8 +76,8 @@ export class PrismaConversationRepository implements ConversationRepositoryPort 
       })),
       lastMessagePreview: lastMessage
         ? lastMessage.senderId === forUserId
-          ? `you: ${lastMessage.content}`
-          : lastMessage.content
+          ? `you: ${describeMessage(lastMessage)}`
+          : describeMessage(lastMessage)
         : null,
       lastMessageAt: lastMessage?.createdAt ?? null,
       unreadCount,

@@ -110,11 +110,19 @@ any environment with normal internet access.
   `/contacts`, `/notifications`, `/search`, `/settings`, `/profile/[userId]`) returns HTTP 200 with
   no server-side errors; an unknown path correctly returns the custom 404 page.
 
-## Known simplifications (intentional, Phase 1 scope)
+## Voice messages
+
+The composer's microphone button (shown whenever there is no text to send) records a voice note with
+`MediaRecorder`, uploads it through the normal media endpoint, and sends an attachment-only message.
+Voice notes are ordinary `file` attachments whose mime type is `audio/*`; `ChatBubble` renders them
+with `AudioCard` (play/pause, seek, elapsed/total duration) whenever the mime type starts with
+`audio/`. The API accepts every container the browsers produce (`audio/webm`, `audio/ogg`,
+`audio/mp4`, `audio/mpeg`, `audio/wav`, `audio/x-m4a`), and the conversation list previews such a
+message as "🎤 Voice message".
+
+## Known simplifications
 
 - Emoji picker is a placeholder (quick-reaction grid) per the original component spec — a full
-  emoji set/search is a follow-up, not required for Phase 1 completion.
-- Image/file attachments render structured placeholder cards (no real binary upload/storage exists
-  until Phase 2 media upload is built).
-- Mock realtime (typing + canned replies) only simulates one open tab; true multi-client realtime
-  arrives with the Phase 2 Socket.IO gateway.
+  emoji set/search is a follow-up.
+- Mock realtime (typing + canned replies) only simulates one open tab; the real Socket.IO gateway is
+  what the app actually runs against.

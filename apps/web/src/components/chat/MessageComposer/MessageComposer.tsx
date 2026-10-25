@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Paperclip, Send, Smile, X } from "lucide-react";
+import { FileText, Mic, Paperclip, Send, Smile, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { EmojiPickerPlaceholder } from "@/components/ui/EmojiPicker";
@@ -41,6 +41,18 @@ export function MessageComposer({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const gifInputRef = useRef<HTMLInputElement>(null);
+
+  // --- Voice messages -------------------------------------------------------
+  const [recording, setRecording] = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [sendingVoice, setSendingVoice] = useState(false);
+
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunks = useRef<Blob[]>([]);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const recordingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const discardRecordingRef = useRef(false);
 
   // Revoke every blob URL on unmount so we don't leak memory across a long session.
   useEffect(() => {
@@ -107,8 +119,139 @@ export function MessageComposer({
     setPending([]);
   }
 
+  // --- Voice recording ------------------------------------------------------
+
+  function clearRecordingTimer() {
+    if (recordingTimer.current) clearInterval(recordingTimer.current);
+    recordingTimer.current = null;
+  }
+
+  function stopMicTracks() {
+    micStreamRef.current?.getTracks().forEach((track) => track.stop());
+    micStreamRef.current = null;
+  }
+
+  /** MediaRecorder only produces opus in webm/ogg (Chromium/Firefox) or mp4 (Safari). */
+  function pickAudioMimeType(): string | undefined {
+    if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") {
+      return undefined;
+    }
+    return ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"].find((type) =>
+      MediaRecorder.isTypeSupported(type)
+    );
+  }
+
+  function describeMicError(error: unknown): string {
+    const name = (error as DOMException | undefined)?.name;
+    if (name === "NotAllowedError" || name === "SecurityError") {
+      return "Microphone permission was denied.";
+    }
+    if (name === "NotFoundError") return "No microphone was found.";
+    if (name === "NotReadableError") return "Your microphone is already in use by another app.";
+    return "Could not start recording.";
+  }
+
+  async function startRecording() {
+    setVoiceError(null);
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setVoiceError("Recording is not supported in this browser.");
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micStreamRef.current = stream;
+
+      const mimeType = pickAudioMimeType();
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      recordedChunks.current = [];
+      discardRecordingRef.current = false;
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) recordedChunks.current.push(event.data);
+      };
+
+      recorder.start();
+      recorderRef.current = recorder;
+      setRecording(true);
+      setRecordSeconds(0);
+      recordingTimer.current = setInterval(() => setRecordSeconds((s) => s + 1), 1000);
+    } catch (error) {
+      stopMicTracks();
+      setVoiceError(describeMicError(error));
+    }
+  }
+
+  function stopRecorder(): Promise<Blob | null> {
+    return new Promise((resolve) => {
+      const recorder = recorderRef.current;
+      if (!recorder || recorder.state === "inactive") {
+        resolve(null);
+        return;
+      }
+      recorder.onstop = () => {
+        const type = recorder.mimeType || "audio/webm";
+        const blob = new Blob(recordedChunks.current, { type });
+        resolve(blob.size > 0 ? blob : null);
+      };
+      recorder.stop();
+    });
+  }
+
+  async function finishRecording() {
+    clearRecordingTimer();
+    setRecording(false);
+
+    const blob = await stopRecorder();
+    recorderRef.current = null;
+    stopMicTracks();
+
+    const discarded = discardRecordingRef.current;
+    discardRecordingRef.current = false;
+    if (!blob || discarded) return;
+
+    setSendingVoice(true);
+    try {
+      const extension = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "m4a" : "webm";
+      const file = new File([blob], `voice-${Date.now()}.${extension}`, { type: blob.type });
+      const attachment = await uploadFile(file);
+      // Text is empty on purpose: an attachment-only message is valid.
+      onSend("", [attachment.id]);
+    } catch (error) {
+      setVoiceError(error instanceof Error ? error.message : "Could not send the voice message.");
+    } finally {
+      setSendingVoice(false);
+    }
+  }
+
+  function cancelRecording() {
+    discardRecordingRef.current = true;
+    void finishRecording();
+  }
+
+  // Stop the microphone and timers if the composer unmounts mid-recording.
+  useEffect(() => {
+    return () => {
+      clearRecordingTimer();
+      if (recorderRef.current && recorderRef.current.state !== "inactive") {
+        recorderRef.current.stop();
+      }
+      stopMicTracks();
+    };
+  }, []);
+
+  function formatClock(totalSeconds: number): string {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  }
+
   return (
     <div className="shrink-0 border-t border-border-subtle bg-bg-surface p-3">
+      {voiceError && (
+        <p role="alert" className="mb-2 text-xs text-danger">
+          {voiceError}
+        </p>
+      )}
       {replyTo && (
         <div className="mb-2 flex items-center gap-2 rounded-[var(--radius-sm)] border-l-2 border-accent-signal bg-bg-elevated px-2.5 py-1.5">
           <div className="min-w-0 flex-1">
@@ -186,74 +329,115 @@ export function MessageComposer({
             e.target.value = "";
           }}
         />
-        <button
-          type="button"
-          aria-label="Attach file"
-          disabled={disabled}
-          onClick={() => fileInputRef.current?.click()}
-          className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full text-text-muted hover:text-text-primary hover:bg-bg-hover disabled:opacity-40"
-        >
-          <Paperclip className="h-[18px] w-[18px]" strokeWidth={1.8} aria-hidden />
-        </button>
-        <button
-          type="button"
-          aria-label="Send a GIF"
-          disabled={disabled}
-          onClick={() => gifInputRef.current?.click()}
-          className="h-9 px-2 shrink-0 flex items-center justify-center rounded-full text-[11px] font-bold tracking-wide text-text-muted hover:text-text-primary hover:bg-bg-hover disabled:opacity-40"
-        >
-          GIF
-        </button>
-
-        <textarea
-          ref={textareaRef}
-          value={value}
-          disabled={disabled}
-          onChange={(e) => handleChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSend();
-            }
-          }}
-          placeholder="Write a message…"
-          rows={1}
-          className="flex-1 resize-none bg-transparent py-2 text-sm text-text-primary placeholder:text-text-muted outline-none max-h-32"
-        />
-
-        <div className="relative">
-          <button
-            type="button"
-            aria-label="Emoji"
-            disabled={disabled}
-            onClick={() => setShowEmoji((s) => !s)}
-            className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full text-text-muted hover:text-text-primary hover:bg-bg-hover disabled:opacity-40"
-          >
-            <Smile className="h-[18px] w-[18px]" strokeWidth={1.8} aria-hidden />
-          </button>
-          {showEmoji && (
-            <div className="absolute bottom-11 right-0 z-30">
-              <EmojiPickerPlaceholder
-                onSelect={(emoji) => {
-                  handleChange(value + emoji);
-                  setShowEmoji(false);
-                  textareaRef.current?.focus();
-                }}
-                onClose={() => setShowEmoji(false)}
-              />
+        {recording ? (
+          <div className="flex flex-1 items-center gap-3 px-1 py-1.5">
+            <span className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-danger" aria-hidden />
+            <span className="font-mono text-sm tabular-nums">{formatClock(recordSeconds)}</span>
+            <span className="hidden text-xs text-text-muted sm:inline">Recording voice message…</span>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                type="button"
+                onClick={cancelRecording}
+                aria-label="Discard voice message"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-text-muted hover:bg-bg-hover hover:text-text-primary"
+              >
+                <X className="h-4 w-4" strokeWidth={2} aria-hidden />
+              </button>
+              <button
+                type="button"
+                onClick={() => void finishRecording()}
+                aria-label="Send voice message"
+                disabled={sendingVoice}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-signal text-white transition-colors hover:bg-accent-signal-dim disabled:opacity-40"
+              >
+                <Send className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              aria-label="Attach file"
+              disabled={disabled}
+              onClick={() => fileInputRef.current?.click()}
+              className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full text-text-muted hover:text-text-primary hover:bg-bg-hover disabled:opacity-40"
+            >
+              <Paperclip className="h-[18px] w-[18px]" strokeWidth={1.8} aria-hidden />
+            </button>
+            <button
+              type="button"
+              aria-label="Send a GIF"
+              disabled={disabled}
+              onClick={() => gifInputRef.current?.click()}
+              className="h-9 px-2 shrink-0 flex items-center justify-center rounded-full text-[11px] font-bold tracking-wide text-text-muted hover:text-text-primary hover:bg-bg-hover disabled:opacity-40"
+            >
+              GIF
+            </button>
 
-        <button
-          type="button"
-          onClick={handleSend}
-          disabled={disabled || !canSend}
-          aria-label="Send message"
-          className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full bg-accent-signal text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent-signal-dim transition-colors"
-        >
-          <Send className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
-        </button>
+            <textarea
+              ref={textareaRef}
+              value={value}
+              disabled={disabled}
+              onChange={(e) => handleChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              placeholder="Write a message…"
+              rows={1}
+              className="flex-1 resize-none bg-transparent py-2 text-sm text-text-primary placeholder:text-text-muted outline-none max-h-32"
+            />
+
+            <div className="relative">
+              <button
+                type="button"
+                aria-label="Emoji"
+                disabled={disabled}
+                onClick={() => setShowEmoji((s) => !s)}
+                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full text-text-muted hover:text-text-primary hover:bg-bg-hover disabled:opacity-40"
+              >
+                <Smile className="h-[18px] w-[18px]" strokeWidth={1.8} aria-hidden />
+              </button>
+              {showEmoji && (
+                <div className="absolute bottom-11 right-0 z-30">
+                  <EmojiPickerPlaceholder
+                    onSelect={(emoji) => {
+                      handleChange(value + emoji);
+                      setShowEmoji(false);
+                      textareaRef.current?.focus();
+                    }}
+                    onClose={() => setShowEmoji(false)}
+                  />
+                </div>
+              )}
+            </div>
+
+            {canSend ? (
+              <button
+                type="button"
+                onClick={handleSend}
+                disabled={disabled}
+                aria-label="Send message"
+                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full bg-accent-signal text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent-signal-dim transition-colors"
+              >
+                <Send className="h-[18px] w-[18px]" strokeWidth={2} aria-hidden />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void startRecording()}
+                disabled={disabled || sendingVoice}
+                aria-label="Record voice message"
+                className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full bg-accent-signal text-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent-signal-dim transition-colors"
+              >
+                <Mic className="h-[18px] w-[18px]" strokeWidth={1.8} aria-hidden />
+              </button>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
