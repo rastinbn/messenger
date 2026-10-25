@@ -1,0 +1,71 @@
+# Render Blueprint — one repo, every service redeployed on every push.
+#
+# `autoDeploy: true` is what makes "commit → push → deploy" work: Render watches
+# the repository's default branch and starts a build+deploy for each service on
+# every push to it. (On services created by hand this is the "Auto-Deploy"
+# toggle under Settings → Build & Deploy.)
+#
+# New project:   Dashboard → New → Blueprint → pick this repo.
+# Existing one:  this file creates *new* services; either delete the hand-made
+#                ones afterwards, or skip the file and just switch Auto-Deploy on
+#                for each existing service (same end result).
+
+services:
+  - type: web
+    name: messenger-api
+    runtime: node
+    plan: free
+    autoDeploy: true
+    rootDir: .
+    # Migrations are not a build step; on the free plan there is no pre-deploy
+    # command, so the start command applies pending migrations before booting
+    # (safe because a free service is a single instance). On a paid plan, move
+    # this to `preDeployCommand` and use `start:prod` here instead.
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @messenger/api exec prisma generate && pnpm --filter @messenger/api build
+    startCommand: pnpm --filter @messenger/api start:prod:migrate
+    healthCheckPath: /v1/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: messenger-db
+          property: connectionString
+      # Render no longer provides Redis; paste an Upstash/Redis Cloud URL
+      # (rediss://…) at creation time.
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      # Both need the deployed web origin, e.g. https://messenger-web.onrender.com
+      - key: CORS_ORIGINS
+        sync: false
+      - key: APP_URL
+        sync: false
+
+  - type: web
+    name: messenger-web
+    runtime: node
+    plan: free
+    autoDeploy: true
+    rootDir: .
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @messenger/web build
+    startCommand: pnpm --filter @messenger/web start
+    healthCheckPath: /login
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Baked into the bundle at build time — set it before the first deploy and
+      # redeploy after changing it.
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+
+databases:
+  - name: messenger-db
+    databaseName: messenger
+    user: messenger
+    plan: free

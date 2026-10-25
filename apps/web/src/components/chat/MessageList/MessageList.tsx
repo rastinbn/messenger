@@ -7,8 +7,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ChatBubble } from "@/components/chat/ChatBubble";
 import { TypingIndicator } from "@/components/chat/TypingIndicator";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { cn } from "@/lib/cn";
 import { formatRelativeDay } from "@/lib/formatTime";
 import { useChatPrefsStore } from "@/stores/useChatPrefsStore";
+import type { ChatBackground } from "@/stores/useChatBackgroundStore";
 
 export interface MessageListProps {
   messages: Message[];
@@ -18,6 +20,8 @@ export interface MessageListProps {
   /** Switching threads lands on the newest message instantly instead of animating. */
   conversationId?: string;
   isLoading?: boolean;
+  /** Per-conversation wallpaper, chosen from the chat header. */
+  background?: ChatBackground;
   onReply?: (message: Message) => void;
   onForward?: (message: Message) => void;
   onDelete?: (message: Message) => void;
@@ -37,6 +41,7 @@ export function MessageList({
   typingUserIds,
   conversationId,
   isLoading,
+  background = "default",
   onReply,
   onForward,
   onDelete
@@ -122,7 +127,10 @@ export function MessageList({
 
   if (isLoading) {
     return (
-      <div className="flex-1 min-h-0 flex flex-col gap-4 p-4 overflow-y-auto">
+      <div
+        className="flex-1 min-h-0 flex flex-col gap-4 p-4 overflow-y-auto chat-surface"
+        data-chat-bg={background === "default" ? undefined : background}
+      >
         {[...Array(5)].map((_, i) => (
           <Skeleton key={i} className={`h-10 ${i % 2 ? "w-1/3 ml-auto" : "w-1/2"}`} />
         ))}
@@ -137,8 +145,13 @@ export function MessageList({
   );
 
   if (uniqueMessages.length === 0) {
+    // The wallpaper has to survive the empty state too — a brand-new chat
+    // otherwise looks like the background choice did nothing.
     return (
-      <div className="flex-1 min-h-0 flex items-center justify-center text-text-muted text-sm">
+      <div
+        className="flex-1 min-h-0 flex items-center justify-center text-text-muted text-sm chat-surface"
+        data-chat-bg={background === "default" ? undefined : background}
+      >
         No messages yet — say hello.
       </div>
     );
@@ -155,7 +168,10 @@ export function MessageList({
   });
 
   return (
-    <div className="relative flex-1 min-h-0">
+    <div
+      className={cn("relative flex-1 min-h-0 chat-surface")}
+      data-chat-bg={background === "default" ? undefined : background}
+    >
       <div
         ref={scrollRef}
         onScroll={handleScroll}

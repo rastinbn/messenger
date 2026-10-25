@@ -24,6 +24,7 @@ import { useCurrentUser } from "@/hooks/useUsers";
 import { useServices } from "@/components/providers/ServiceProvider";
 import { ApiError } from "@/lib/api/http-client";
 import { useUiStore } from "@/stores/useUiStore";
+import { useChatBackground } from "@/stores/useChatBackgroundStore";
 import { useLocale } from "@/components/providers/LocaleProvider";
 
 export default function ChatWindowPage() {
@@ -42,6 +43,7 @@ export default function ChatWindowPage() {
   const deleteMessage = useDeleteMessage();
   const forwardMessage = useForwardMessage();
   const markRead = useMarkRead();
+  const background = useChatBackground(conversationId);
 
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [forwarding, setForwarding] = useState<Message | null>(null);
@@ -118,6 +120,7 @@ export default function ChatWindowPage() {
         currentUserId={currentUser.id}
         typingUserIds={typingUserIds}
         isLoading={messagesLoading}
+        background={background}
         onReply={setReplyTo}
         onForward={setForwarding}
         onDelete={setPendingDelete}

@@ -110,6 +110,24 @@ any environment with normal internet access.
   `/contacts`, `/notifications`, `/search`, `/settings`, `/profile/[userId]`) returns HTTP 200 with
   no server-side errors; an unknown path correctly returns the custom 404 page.
 
+## Themes and chat backgrounds
+
+**Themes.** Six palettes — Graphite (default dark), Paper (light), Midnight, Forest, Sunset, Rose — are
+plain `:root[data-theme="…"]` blocks in `globals.css` that only redefine colour tokens, so no component
+knows a theme exists. `useThemeStore` (`THEME_OPTIONS`) drives the picker in Settings → Appearance and
+writes `<html data-theme>`; the choice persists in `localStorage` under `messenger.theme`.
+
+**Chat backgrounds.** Each conversation can get its own wallpaper, picked from the palette button in
+the chat header. Variants are CSS-only (dots, grid, waves, and four gradients) defined as
+`.chat-surface[data-chat-bg="…"]` rules that read `--chat-pattern-ink` / `--chat-glow`, so they adapt
+to every theme automatically — there is no image to upload or cache. `useChatBackgroundStore` keeps
+`conversationId → background` in `localStorage` (`messenger.chatBackgrounds`) and the chat page passes
+it to `MessageList`, which applies it to the message area only (header and composer stay themed
+surfaces) in all three states: loading, empty, and with messages.
+
+Both choices are per device: they live in `localStorage`, not on the account, so they do not follow a
+user to another browser. Syncing them would need a server-side preference (and a migration).
+
 ## Voice messages
 
 The composer's microphone button (shown whenever there is no text to send) records a voice note with

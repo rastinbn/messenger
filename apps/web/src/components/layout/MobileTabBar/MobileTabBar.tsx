@@ -7,9 +7,15 @@ import { Bell, MessageSquare, Search, Settings, Shield, Users, type LucideIcon }
 import { cn } from "@/lib/cn";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useCurrentUser } from "@/hooks/useUsers";
-import { useLocale } from "@/components/providers/LocaleProvider";
+import { useLocale, type MessageKey } from "@/components/providers/LocaleProvider";
 
-const BASE_TABS: { href: string; label: "nav.chats" | "nav.contacts" | "nav.search" | "nav.alerts" | "nav.settings" | "nav.admin"; Icon: LucideIcon }[] = [
+interface TabItem {
+  href: string;
+  label: MessageKey;
+  Icon: LucideIcon;
+}
+
+const BASE_TABS: TabItem[] = [
   { href: "/chat", label: "nav.chats", Icon: MessageSquare },
   { href: "/contacts", label: "nav.contacts", Icon: Users },
   { href: "/search", label: "nav.search", Icon: Search },
@@ -24,7 +30,7 @@ export function MobileTabBar() {
   const { data: user } = useCurrentUser();
   const unread = notifications?.filter((n) => !n.read).length ?? 0;
 
-  const tabs =
+  const tabs: TabItem[] =
     user?.siteRole === "admin"
       ? [...BASE_TABS, { href: "/admin", label: "nav.admin", Icon: Shield }]
       : BASE_TABS;

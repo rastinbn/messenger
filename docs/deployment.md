@@ -172,6 +172,31 @@ It reports applied/pending/unknown migrations, required tables, and the columns 
 migrations, and exits non-zero if anything is missing. A green local run proves nothing about the
 deployed database — always point `DATABASE_URL` at the real one.
 
+### Deploy on every push (auto-deploy)
+
+Render can watch the repository and redeploy on every push, so "commit → push" is the whole deploy:
+
+**Existing services:** Settings → Build & Deploy → **Auto-Deploy: Yes**, with *Branch* set to the
+branch you push to (`main` by default). Do it once per service — API and web — and a push to that
+branch builds and deploys both.
+
+**New project:** `render.yaml` in the repo root declares both services (and the database) with
+`autoDeploy: true`. Dashboard → New → Blueprint → pick the repo. It creates new services, so if you
+already made them by hand, either delete the old ones afterwards or skip the blueprint and just flip
+the toggle above.
+
+Notes:
+
+- Auto-deploy triggers on **every** push to that branch, including docs-only changes. To avoid
+  useless rebuilds, add a `buildFilter` to a service in `render.yaml` (`paths: [apps/web/**, …]`) or
+  keep the toggle off and trigger deploys deliberately.
+- The API's start command is `start:prod:migrate` on the free plan, so a push that adds a migration
+  applies it during the deploy's boot (single instance). On a paid plan move that to
+  `preDeployCommand` — the database is then migrated before the new version takes traffic.
+- Prefer deploying only on tags/releases? Turn auto-deploy off and call each service's **Deploy Hook**
+  URL from CI (`curl -X POST "$RENDER_DEPLOY_HOOK"`).
+- A failed build leaves the previous version live; the deploy log shows the failing step.
+
 ## Process / infrastructure
 
 Not opinionated by this repo — deploy the NestJS app (`apps/api`) as a standard Node.js process

@@ -109,6 +109,23 @@ const messages = {
     "message.deleteTitle": "Delete message?",
     "message.deleteHelp": "This message will be deleted for everyone in this conversation. This cannot be undone.",
     "message.delete": "Delete",
+    "theme.title": "Theme",
+    "theme.graphite": "Graphite",
+    "theme.paper": "Paper",
+    "theme.midnight": "Midnight",
+    "theme.forest": "Forest",
+    "theme.sunset": "Sunset",
+    "theme.rose": "Rose",
+    "chat.background": "Chat background",
+    "chat.backgroundHint": "Applies to this conversation on this device.",
+    "chat.backgroundDefault": "Theme default",
+    "chat.backgroundDots": "Dots",
+    "chat.backgroundGrid": "Grid",
+    "chat.backgroundWaves": "Waves",
+    "chat.backgroundSunset": "Sunset",
+    "chat.backgroundOcean": "Ocean",
+    "chat.backgroundForest": "Forest",
+    "chat.backgroundDusk": "Dusk",
     "error.title": "Something went wrong",
     "error.notFound": "Page not found",
     "error.backHome": "Back to home",
@@ -219,6 +236,23 @@ const messages = {
     "message.deleteTitle": "پیام حذف شود؟",
     "message.deleteHelp": "این پیام برای همه‌ی افراد این گفت‌وگو حذف می‌شود و نمی‌توان آن را برگرداند.",
     "message.delete": "حذف پیام",
+    "theme.title": "پوسته",
+    "theme.graphite": "گرافیت",
+    "theme.paper": "کاغذی",
+    "theme.midnight": "نیمه‌شب",
+    "theme.forest": "جنگل",
+    "theme.sunset": "غروب",
+    "theme.rose": "رز",
+    "chat.background": "پس‌زمینه‌ی گفت‌وگو",
+    "chat.backgroundHint": "فقط برای همین گفت‌وگو روی این دستگاه اعمال می‌شود.",
+    "chat.backgroundDefault": "پیش‌فرض پوسته",
+    "chat.backgroundDots": "نقطه‌ای",
+    "chat.backgroundGrid": "شبکه‌ای",
+    "chat.backgroundWaves": "موج",
+    "chat.backgroundSunset": "غروب",
+    "chat.backgroundOcean": "اقیانوس",
+    "chat.backgroundForest": "جنگل",
+    "chat.backgroundDusk": "گرگ‌ومیش",
     "error.title": "مشکلی پیش آمد",
     "error.notFound": "صفحه پیدا نشد",
     "error.backHome": "بازگشت به خانه",
@@ -251,6 +285,10 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const stored = window.localStorage.getItem("messenger-locale");
+    // Applying the stored locale after mount is deliberate: the server always
+    // renders the default locale, so reading localStorage during render would
+    // break hydration.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (stored === "fa" || stored === "en") setLocaleState(stored);
   }, []);
 

@@ -42,6 +42,10 @@
      repaint ::-webkit-scrollbar-thumb on :hover, so no hover state here. */
   --scrollbar-thumb: #47474f;
   --scrollbar-track: transparent;
+
+  /* Ink used by the chat-background patterns; flipped for light themes. */
+  --chat-pattern-ink: rgba(255, 255, 255, 0.07);
+  --chat-glow: rgba(91, 140, 255, 0.14);
 }
 
 /* Light mode override — dark is the primary/default experience for this product,
@@ -63,6 +67,99 @@
   --accent-signal-dim: #a9bdf5;
 
   --scrollbar-thumb: #c6c6d0;
+
+  --chat-pattern-ink: rgba(0, 0, 0, 0.06);
+  --chat-glow: rgba(58, 99, 221, 0.10);
+}
+
+/* ---------------------------------------------------------------------------
+   Alternate dark palettes. Each theme only redefines colour tokens, so every
+   component keeps working untouched; `data-theme` is set on <html> by the
+   theme store (Settings → Appearance).
+--------------------------------------------------------------------------- */
+
+/* Deep navy. */
+:root[data-theme="midnight"] {
+  --bg-base: #0b1020;
+  --bg-surface: #111a2e;
+  --bg-elevated: #1a2540;
+  --bg-hover: #233152;
+
+  --border-subtle: #1d2740;
+  --border-default: #2a3554;
+
+  --text-primary: #e8eeff;
+  --text-secondary: #b7c3e2;
+  --text-muted: #8492b6;
+
+  --accent-signal: #7aa2ff;
+  --accent-signal-dim: #3f63c9;
+
+  --scrollbar-thumb: #2f3d5f;
+  --chat-glow: rgba(122, 162, 255, 0.16);
+}
+
+/* Dark forest greens. */
+:root[data-theme="forest"] {
+  --bg-base: #0c1511;
+  --bg-surface: #122019;
+  --bg-elevated: #1a2b22;
+  --bg-hover: #22382d;
+
+  --border-subtle: #1d2f26;
+  --border-default: #2a4236;
+
+  --text-primary: #e7f3ec;
+  --text-secondary: #b4cdbf;
+  --text-muted: #7f9a8b;
+
+  --accent-signal: #4ade80;
+  --accent-signal-dim: #2f9e5c;
+
+  --scrollbar-thumb: #2b4438;
+  --chat-glow: rgba(74, 222, 128, 0.14);
+}
+
+/* Warm dusk — browns and burnt orange. */
+:root[data-theme="sunset"] {
+  --bg-base: #17100f;
+  --bg-surface: #211614;
+  --bg-elevated: #2c1e1a;
+  --bg-hover: #3a2823;
+
+  --border-subtle: #2a1d19;
+  --border-default: #3b2a24;
+
+  --text-primary: #f7ebe4;
+  --text-secondary: #d8c0b5;
+  --text-muted: #a38d83;
+
+  --accent-signal: #ff8a4c;
+  --accent-signal-dim: #c25f2e;
+
+  --scrollbar-thumb: #443029;
+  --chat-glow: rgba(255, 138, 76, 0.16);
+}
+
+/* Rose — plum surfaces with a warm pink accent. */
+:root[data-theme="rose"] {
+  --bg-base: #150f14;
+  --bg-surface: #1f1620;
+  --bg-elevated: #2a1d2b;
+  --bg-hover: #382737;
+
+  --border-subtle: #291d2a;
+  --border-default: #3a2a3a;
+
+  --text-primary: #f8eaf4;
+  --text-secondary: #d5bccf;
+  --text-muted: #9d87a2;
+
+  --accent-signal: #ff6b9d;
+  --accent-signal-dim: #c24373;
+
+  --scrollbar-thumb: #422f42;
+  --chat-glow: rgba(255, 107, 157, 0.15);
 }
 
 @theme inline {
@@ -189,4 +286,60 @@ html[lang="fa"] body {
 @keyframes messageRise {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------------------------------------------------------------------------
+   Per-conversation chat backgrounds.
+
+   Applied to the message area only (header/composer stay themed surfaces).
+   Every variant is pure CSS, so there is no image to upload or lazy-load, and
+   it follows the active theme through --chat-pattern-ink / --chat-glow.
+--------------------------------------------------------------------------- */
+
+.chat-surface {
+  background-color: transparent;
+  background-image: var(--chat-bg, none);
+  background-size: var(--chat-bg-size, auto);
+  background-position: center;
+  background-repeat: var(--chat-bg-repeat, repeat);
+}
+
+.chat-surface[data-chat-bg="dots"] {
+  --chat-bg: radial-gradient(var(--chat-pattern-ink) 1px, transparent 1px);
+  --chat-bg-size: 18px 18px;
+}
+
+.chat-surface[data-chat-bg="grid"] {
+  --chat-bg:
+    linear-gradient(to right, var(--chat-pattern-ink) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--chat-pattern-ink) 1px, transparent 1px);
+  --chat-bg-size: 28px 28px;
+}
+
+.chat-surface[data-chat-bg="waves"] {
+  --chat-bg: repeating-linear-gradient(-45deg, var(--chat-pattern-ink) 0 1px, transparent 1px 14px);
+}
+
+.chat-surface[data-chat-bg="sunset"] {
+  --chat-bg: linear-gradient(160deg, rgba(255, 138, 76, 0.18), transparent 55%, rgba(255, 107, 157, 0.12));
+  --chat-bg-size: cover;
+  --chat-bg-repeat: no-repeat;
+}
+
+.chat-surface[data-chat-bg="ocean"] {
+  --chat-bg: linear-gradient(160deg, rgba(56, 189, 248, 0.18), transparent 55%, rgba(30, 64, 175, 0.16));
+  --chat-bg-size: cover;
+  --chat-bg-repeat: no-repeat;
+}
+
+.chat-surface[data-chat-bg="forest"] {
+  --chat-bg: linear-gradient(160deg, rgba(74, 222, 128, 0.16), transparent 55%, rgba(6, 95, 70, 0.18));
+  --chat-bg-size: cover;
+  --chat-bg-repeat: no-repeat;
+}
+
+.chat-surface[data-chat-bg="dusk"] {
+  --chat-bg: linear-gradient(160deg, rgba(167, 139, 250, 0.18), transparent 55%, rgba(219, 39, 119, 0.14));
+  --chat-bg-size: cover;
+  --chat-bg-repeat: no-repeat;
 }

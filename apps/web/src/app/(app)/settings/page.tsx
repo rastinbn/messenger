@@ -8,11 +8,12 @@ import { Input } from "@/components/ui/Input";
 import { Switch } from "@/components/ui/Switch";
 import { useLogout, useResendVerificationEmail } from "@/hooks/useAuth";
 import { useCurrentUser, useUpdateProfile, useUpdateStatus } from "@/hooks/useUsers";
-import { useThemeStore } from "@/stores/useThemeStore";
+import { useThemeStore, THEME_OPTIONS, type Theme } from "@/stores/useThemeStore";
 import { useChatPrefsStore } from "@/stores/useChatPrefsStore";
 import type { UserStatus } from "@messenger/shared-types";
 import { LanguageToggle, useLocale } from "@/components/providers/LocaleProvider";
 import type { MessageKey } from "@/components/providers/LocaleProvider";
+import { cn } from "@/lib/cn";
 
 const STATUS_OPTIONS: { value: UserStatus; label: MessageKey }[] = [
   { value: "online", label: "settings.online" },
@@ -20,6 +21,15 @@ const STATUS_OPTIONS: { value: UserStatus; label: MessageKey }[] = [
   { value: "dnd", label: "settings.dnd" },
   { value: "offline", label: "settings.offline" }
 ];
+
+const THEME_LABEL_KEY: Record<Theme, MessageKey> = {
+  dark: "theme.graphite",
+  light: "theme.paper",
+  midnight: "theme.midnight",
+  forest: "theme.forest",
+  sunset: "theme.sunset",
+  rose: "theme.rose"
+};
 
 function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -69,7 +79,7 @@ export default function SettingsPage() {
   const updateStatus = useUpdateStatus();
   const logout = useLogout();
   const theme = useThemeStore((s) => s.theme);
-  const toggleTheme = useThemeStore((s) => s.toggleTheme);
+  const setTheme = useThemeStore((s) => s.setTheme);
   const keepLastMessageVisible = useChatPrefsStore((s) => s.keepLastMessageVisible);
   const setKeepLastMessageVisible = useChatPrefsStore((s) => s.setKeepLastMessageVisible);
 
@@ -137,10 +147,40 @@ export default function SettingsPage() {
         </SettingsSection>
 
         <SettingsSection title={t("settings.appearance")}>
-          <Row>
-            <span className="text-sm">{t("settings.darkMode")}</span>
-            <Switch checked={theme === "dark"} onChange={toggleTheme} />
-          </Row>
+          <div className="px-4 py-4">
+            <p className="mb-3 text-sm">{t("theme.title")}</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {THEME_OPTIONS.map((option) => {
+                const active = theme === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setTheme(option.id)}
+                    aria-pressed={active}
+                    aria-label={t(THEME_LABEL_KEY[option.id])}
+                    className={cn(
+                      "flex items-center gap-2 rounded-[var(--radius-md)] border p-2.5 text-start transition-colors",
+                      active
+                        ? "border-accent-signal bg-bg-elevated"
+                        : "border-border-default hover:bg-bg-hover"
+                    )}
+                  >
+                    <span className="flex shrink-0 gap-1" aria-hidden>
+                      {option.swatches.map((color) => (
+                        <span
+                          key={color}
+                          className="h-4 w-4 rounded-full ring-1 ring-black/20"
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </span>
+                    <span className="truncate text-sm">{t(THEME_LABEL_KEY[option.id])}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <Row>
             <span className="text-sm">{t("settings.language")}</span>
             <LanguageToggle />
