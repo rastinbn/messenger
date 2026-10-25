@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type Theme = "dark" | "light" | "midnight" | "forest" | "sunset" | "rose";
+export type Theme = "dark" | "neon" | "aurora" | "cyber" | "sunset" | "candy";
 
 export interface ThemeOption {
   id: Theme;
@@ -18,38 +18,38 @@ export const THEME_OPTIONS: ThemeOption[] = [
   {
     id: "dark",
     label: "Graphite",
-    description: "The default dark theme",
+    description: "The calm default",
     swatches: ["#141417", "#26262e", "#5b8cff"]
   },
   {
-    id: "light",
-    label: "Paper",
-    description: "Bright and neutral",
-    swatches: ["#f7f7f9", "#ffffff", "#3a63dd"]
+    id: "neon",
+    label: "Neon",
+    description: "Cyan and magenta after dark",
+    swatches: ["#07060f", "#171029", "#22d3ee"]
   },
   {
-    id: "midnight",
-    label: "Midnight",
-    description: "Deep navy blue",
-    swatches: ["#0b1020", "#1a2540", "#7aa2ff"]
+    id: "aurora",
+    label: "Aurora",
+    description: "Teal and violet, like a night sky",
+    swatches: ["#04121a", "#0d2a33", "#2dd4bf"]
   },
   {
-    id: "forest",
-    label: "Forest",
-    description: "Quiet greens",
-    swatches: ["#0c1511", "#1a2b22", "#4ade80"]
+    id: "cyber",
+    label: "Cyber",
+    description: "Black and acid lime",
+    swatches: ["#060a05", "#121c0d", "#a3e635"]
   },
   {
     id: "sunset",
     label: "Sunset",
-    description: "Warm dusk tones",
-    swatches: ["#17100f", "#2c1e1a", "#ff8a4c"]
+    description: "Burnt orange and hot pink",
+    swatches: ["#12060c", "#2b101c", "#fb923c"]
   },
   {
-    id: "rose",
-    label: "Rose",
-    description: "Plum with a pink accent",
-    swatches: ["#150f14", "#2a1d2b", "#ff6b9d"]
+    id: "candy",
+    label: "Candy",
+    description: "A bright palette with a hot-pink accent",
+    swatches: ["#fff1f8", "#ffe6f3", "#ec4899"]
   }
 ];
 

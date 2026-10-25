@@ -24,11 +24,11 @@ const STATUS_OPTIONS: { value: UserStatus; label: MessageKey }[] = [
 
 const THEME_LABEL_KEY: Record<Theme, MessageKey> = {
   dark: "theme.graphite",
-  light: "theme.paper",
-  midnight: "theme.midnight",
-  forest: "theme.forest",
+  neon: "theme.neon",
+  aurora: "theme.aurora",
+  cyber: "theme.cyber",
   sunset: "theme.sunset",
-  rose: "theme.rose"
+  candy: "theme.candy"
 };
 
 function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {

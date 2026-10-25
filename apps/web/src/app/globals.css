@@ -46,120 +46,135 @@
   /* Ink used by the chat-background patterns; flipped for light themes. */
   --chat-pattern-ink: rgba(255, 255, 255, 0.07);
   --chat-glow: rgba(91, 140, 255, 0.14);
-}
 
-/* Light mode override — dark is the primary/default experience for this product,
-   but light mode is supported per requirements. */
-:root[data-theme="light"] {
-  --bg-base: #f7f7f9;
-  --bg-surface: #ffffff;
-  --bg-elevated: #ffffff;
-  --bg-hover: #f0f0f3;
-
-  --border-subtle: #e4e4e9;
-  --border-default: #d8d8e0;
-
-  --text-primary: #17171a;
-  --text-secondary: #4d4d57;
-  --text-muted: #7a7a85;
-
-  --accent-signal: #3a63dd;
-  --accent-signal-dim: #a9bdf5;
-
-  --scrollbar-thumb: #c6c6d0;
-
-  --chat-pattern-ink: rgba(0, 0, 0, 0.06);
-  --chat-glow: rgba(58, 99, 221, 0.10);
+  /* Ambient light behind the app — one gradient per theme, layered under the
+     chat surface and behind transparent areas (auth/marketing pages). */
+  --app-glow: radial-gradient(110% 70% at 12% 0%, rgba(91, 140, 255, 0.12), transparent 60%);
 }
 
 /* ---------------------------------------------------------------------------
-   Alternate dark palettes. Each theme only redefines colour tokens, so every
-   component keeps working untouched; `data-theme` is set on <html> by the
-   theme store (Settings → Appearance).
+   Alternate palettes. Each theme only redefines colour tokens (plus its own
+   ambient glow), so every component keeps working untouched; `data-theme` is
+   set on <html> by the theme store (Settings → Appearance).
 --------------------------------------------------------------------------- */
 
-/* Deep navy. */
-:root[data-theme="midnight"] {
-  --bg-base: #0b1020;
-  --bg-surface: #111a2e;
-  --bg-elevated: #1a2540;
-  --bg-hover: #233152;
+/* Neon — cyan on near-black with a magenta glow. */
+:root[data-theme="neon"] {
+  --bg-base: #07060f;
+  --bg-surface: #0d0a1a;
+  --bg-elevated: #171029;
+  --bg-hover: #221741;
 
-  --border-subtle: #1d2740;
-  --border-default: #2a3554;
+  --border-subtle: #211737;
+  --border-default: #332354;
 
-  --text-primary: #e8eeff;
-  --text-secondary: #b7c3e2;
-  --text-muted: #8492b6;
+  --text-primary: #f2ecff;
+  --text-secondary: #c3b6e6;
+  --text-muted: #8f80b8;
 
-  --accent-signal: #7aa2ff;
-  --accent-signal-dim: #3f63c9;
+  --accent-signal: #22d3ee;
+  --accent-signal-dim: #0e7490;
 
-  --scrollbar-thumb: #2f3d5f;
-  --chat-glow: rgba(122, 162, 255, 0.16);
+  --scrollbar-thumb: #2a1f45;
+  --chat-glow: rgba(34, 211, 238, 0.18);
+  --app-glow:
+    radial-gradient(90% 60% at 10% 0%, rgba(34, 211, 238, 0.20), transparent 60%),
+    radial-gradient(80% 60% at 90% 100%, rgba(217, 70, 239, 0.18), transparent 60%);
 }
 
-/* Dark forest greens. */
-:root[data-theme="forest"] {
-  --bg-base: #0c1511;
-  --bg-surface: #122019;
-  --bg-elevated: #1a2b22;
-  --bg-hover: #22382d;
+/* Aurora — teal and violet over a cold navy. */
+:root[data-theme="aurora"] {
+  --bg-base: #04121a;
+  --bg-surface: #081d26;
+  --bg-elevated: #0d2a33;
+  --bg-hover: #123843;
 
-  --border-subtle: #1d2f26;
-  --border-default: #2a4236;
+  --border-subtle: #0f2a34;
+  --border-default: #1a4350;
 
-  --text-primary: #e7f3ec;
-  --text-secondary: #b4cdbf;
-  --text-muted: #7f9a8b;
+  --text-primary: #e6fbff;
+  --text-secondary: #a9d8e0;
+  --text-muted: #77a2ad;
 
-  --accent-signal: #4ade80;
-  --accent-signal-dim: #2f9e5c;
+  --accent-signal: #2dd4bf;
+  --accent-signal-dim: #0f766e;
 
-  --scrollbar-thumb: #2b4438;
-  --chat-glow: rgba(74, 222, 128, 0.14);
+  --scrollbar-thumb: #17414d;
+  --chat-glow: rgba(45, 212, 191, 0.16);
+  --app-glow:
+    radial-gradient(90% 70% at 15% 0%, rgba(45, 212, 191, 0.20), transparent 60%),
+    radial-gradient(80% 60% at 85% 100%, rgba(139, 92, 246, 0.20), transparent 60%);
 }
 
-/* Warm dusk — browns and burnt orange. */
+/* Cyber — black and acid lime. */
+:root[data-theme="cyber"] {
+  --bg-base: #060a05;
+  --bg-surface: #0b1208;
+  --bg-elevated: #121c0d;
+  --bg-hover: #1a2a13;
+
+  --border-subtle: #16220f;
+  --border-default: #24361a;
+
+  --text-primary: #f0ffe0;
+  --text-secondary: #c2d9a8;
+  --text-muted: #8aa077;
+
+  --accent-signal: #a3e635;
+  --accent-signal-dim: #4d7c0f;
+
+  --scrollbar-thumb: #22331a;
+  --chat-glow: rgba(163, 230, 53, 0.16);
+  --app-glow: radial-gradient(100% 70% at 20% 0%, rgba(163, 230, 53, 0.18), transparent 62%);
+}
+
+/* Sunset — burnt orange and hot pink. */
 :root[data-theme="sunset"] {
-  --bg-base: #17100f;
-  --bg-surface: #211614;
-  --bg-elevated: #2c1e1a;
-  --bg-hover: #3a2823;
+  --bg-base: #12060c;
+  --bg-surface: #1d0a13;
+  --bg-elevated: #2b101c;
+  --bg-hover: #3d1727;
 
-  --border-subtle: #2a1d19;
-  --border-default: #3b2a24;
+  --border-subtle: #2c1220;
+  --border-default: #43202f;
 
-  --text-primary: #f7ebe4;
-  --text-secondary: #d8c0b5;
-  --text-muted: #a38d83;
+  --text-primary: #ffece6;
+  --text-secondary: #e3b9b6;
+  --text-muted: #b08388;
 
-  --accent-signal: #ff8a4c;
-  --accent-signal-dim: #c25f2e;
+  --accent-signal: #fb923c;
+  --accent-signal-dim: #c2410c;
 
-  --scrollbar-thumb: #443029;
-  --chat-glow: rgba(255, 138, 76, 0.16);
+  --scrollbar-thumb: #3a1a28;
+  --chat-glow: rgba(251, 146, 60, 0.16);
+  --app-glow:
+    radial-gradient(90% 60% at 15% 0%, rgba(251, 146, 60, 0.22), transparent 60%),
+    radial-gradient(90% 60% at 90% 100%, rgba(236, 72, 153, 0.20), transparent 60%);
 }
 
-/* Rose — plum surfaces with a warm pink accent. */
-:root[data-theme="rose"] {
-  --bg-base: #150f14;
-  --bg-surface: #1f1620;
-  --bg-elevated: #2a1d2b;
-  --bg-hover: #382737;
+/* Candy — a light palette with a hot-pink accent. */
+:root[data-theme="candy"] {
+  --bg-base: #fff1f8;
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffe6f3;
+  --bg-hover: #ffd9ec;
 
-  --border-subtle: #291d2a;
-  --border-default: #3a2a3a;
+  --border-subtle: #f6d3e5;
+  --border-default: #eeb8d6;
 
-  --text-primary: #f8eaf4;
-  --text-secondary: #d5bccf;
-  --text-muted: #9d87a2;
+  --text-primary: #3b0f2b;
+  --text-secondary: #6b3653;
+  --text-muted: #966a84;
 
-  --accent-signal: #ff6b9d;
-  --accent-signal-dim: #c24373;
+  --accent-signal: #ec4899;
+  --accent-signal-dim: #f9a8d4;
 
-  --scrollbar-thumb: #422f42;
-  --chat-glow: rgba(255, 107, 157, 0.15);
+  --scrollbar-thumb: #e7b6cf;
+  --chat-pattern-ink: rgba(59, 15, 43, 0.07);
+  --chat-glow: rgba(236, 72, 153, 0.12);
+  --app-glow:
+    radial-gradient(90% 60% at 12% 0%, rgba(236, 72, 153, 0.14), transparent 60%),
+    radial-gradient(80% 60% at 90% 100%, rgba(139, 92, 246, 0.12), transparent 60%);
 }
 
 @theme inline {
@@ -201,7 +216,10 @@
 }
 
 body {
-  background: var(--bg-base);
+  background-color: var(--bg-base);
+  background-image: var(--app-glow);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
   color: var(--text-primary);
   font-family: var(--font-body);
 }
@@ -298,15 +316,18 @@ html[lang="fa"] body {
 
 .chat-surface {
   background-color: transparent;
-  background-image: var(--chat-bg, none);
-  background-size: var(--chat-bg-size, auto);
+  /* With no explicit wallpaper the theme's ambient glow shows through, so every
+     theme has depth even before the user picks a background. */
+  background-image: var(--chat-bg, var(--app-glow));
+  background-size: var(--chat-bg-size, cover);
   background-position: center;
-  background-repeat: var(--chat-bg-repeat, repeat);
+  background-repeat: var(--chat-bg-repeat, no-repeat);
 }
 
 .chat-surface[data-chat-bg="dots"] {
   --chat-bg: radial-gradient(var(--chat-pattern-ink) 1px, transparent 1px);
   --chat-bg-size: 18px 18px;
+  --chat-bg-repeat: repeat;
 }
 
 .chat-surface[data-chat-bg="grid"] {
@@ -314,10 +335,12 @@ html[lang="fa"] body {
     linear-gradient(to right, var(--chat-pattern-ink) 1px, transparent 1px),
     linear-gradient(to bottom, var(--chat-pattern-ink) 1px, transparent 1px);
   --chat-bg-size: 28px 28px;
+  --chat-bg-repeat: repeat;
 }
 
 .chat-surface[data-chat-bg="waves"] {
   --chat-bg: repeating-linear-gradient(-45deg, var(--chat-pattern-ink) 0 1px, transparent 1px 14px);
+  --chat-bg-repeat: repeat;
 }
 
 .chat-surface[data-chat-bg="sunset"] {
