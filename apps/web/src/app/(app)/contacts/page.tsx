@@ -10,8 +10,10 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { useContacts, useRemoveContact } from "@/hooks/useContacts";
 import { useCreateConversation } from "@/hooks/useChat";
 import { useRouter } from "next/navigation";
+import { useLocale } from "@/components/providers/LocaleProvider";
 
 export default function ContactsPage() {
+  const { t } = useLocale();
   const { data: contacts, isLoading } = useContacts();
   const removeContact = useRemoveContact();
   const createConversation = useCreateConversation();
@@ -30,14 +32,14 @@ export default function ContactsPage() {
   return (
     <main className="flex-1 overflow-y-auto">
       <div className="max-w-2xl mx-auto px-4 py-6 md:py-8">
-        <h1 className="font-display text-2xl mb-1">Contacts</h1>
-        <p className="text-text-secondary text-sm mb-6">People you can message directly.</p>
+        <h1 className="font-display text-2xl mb-1">{t("nav.contacts")}</h1>
+        <p className="text-text-secondary text-sm mb-6">{t("contacts.description")}</p>
 
         <Input
-          placeholder="Search contacts"
+          placeholder={t("contacts.search")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          aria-label="Search contacts"
+          aria-label={t("contacts.search")}
           className="mb-6"
         />
 
@@ -50,7 +52,7 @@ export default function ContactsPage() {
         )}
 
         {!isLoading && filtered.length === 0 && (
-          <p className="text-sm text-text-muted text-center mt-10">No contacts found.</p>
+          <p className="text-sm text-text-muted text-center mt-10">{t("contacts.empty")}</p>
         )}
 
         <ul className="flex flex-col divide-y divide-border-subtle">
@@ -75,10 +77,10 @@ export default function ContactsPage() {
                     )
                   }
                 >
-                  Message
+                  {t("common.message")}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={() => removeContact.mutate(contact.id)}>
-                  Remove
+                  {t("common.remove")}
                 </Button>
               </div>
             </li>

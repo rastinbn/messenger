@@ -109,6 +109,11 @@ body {
   font-family: var(--font-body);
 }
 
+html[lang="fa"] body {
+  font-family: Vazirmatn, IRANSansX, Tahoma, var(--font-body), sans-serif;
+  letter-spacing: 0;
+}
+
 /*
   Scrollbars — thin, pill-shaped and theme-aware. Chromium/WebKit supports the
   ::-webkit-* pseudo-elements, Firefox only the standard properties, so both are

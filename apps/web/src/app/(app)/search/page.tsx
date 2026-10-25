@@ -11,8 +11,10 @@ import { useAddContact } from "@/hooks/useContacts";
 import { useCreateConversation } from "@/hooks/useChat";
 import { useUserSearch } from "@/hooks/useUsers";
 import { Button } from "@/components/ui/Button";
+import { useLocale } from "@/components/providers/LocaleProvider";
 
 export default function SearchPage() {
+  const { t } = useLocale();
   const [query, setQuery] = useState("");
   const { data: results, isFetching } = useUserSearch(query);
   const addContact = useAddContact();
@@ -22,16 +24,16 @@ export default function SearchPage() {
   return (
     <main className="flex-1 overflow-y-auto">
       <div className="max-w-2xl mx-auto px-4 py-6 md:py-8">
-        <h1 className="font-display text-2xl mb-1">Search</h1>
-        <p className="text-text-secondary text-sm mb-6">Find people by name or username.</p>
+        <h1 className="font-display text-2xl mb-1">{t("nav.search")}</h1>
+        <p className="text-text-secondary text-sm mb-6">{t("search.description")}</p>
 
         <Input
           autoFocus
-          placeholder="Search by name or @username"
+          placeholder={t("search.placeholder")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           leadingIcon={<Search className="h-4 w-4" strokeWidth={1.8} aria-hidden />}
-          aria-label="Search users"
+          aria-label={t("search.people")}
         />
 
         <div className="mt-6 flex flex-col divide-y divide-border-subtle">
@@ -39,7 +41,7 @@ export default function SearchPage() {
             [...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 w-full my-1" />)}
 
           {!isFetching && query.trim() && results?.length === 0 && (
-            <p className="text-sm text-text-muted text-center mt-6">No people found for “{query}”.</p>
+            <p className="text-sm text-text-muted text-center mt-6">{t("search.empty", { query })}</p>
           )}
 
           {results?.map((person) => (
@@ -53,7 +55,7 @@ export default function SearchPage() {
               </div>
               <div className="flex items-center gap-2 shrink-0 pl-[52px] sm:pl-0">
                 <Button size="sm" variant="secondary" onClick={() => addContact.mutate(person.id)}>
-                  Add
+                  {t("common.add")}
                 </Button>
                 <Button
                   size="sm"
@@ -64,7 +66,7 @@ export default function SearchPage() {
                     )
                   }
                 >
-                  Message
+                  {t("common.message")}
                 </Button>
               </div>
             </div>

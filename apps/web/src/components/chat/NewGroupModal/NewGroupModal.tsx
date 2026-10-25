@@ -10,6 +10,7 @@ import { Modal } from "@/components/ui/Modal";
 import { useCreateConversation } from "@/hooks/useChat";
 import { useContacts } from "@/hooks/useContacts";
 import { cn } from "@/lib/cn";
+import { useLocale } from "@/components/providers/LocaleProvider";
 
 export interface NewGroupModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export interface NewGroupModalProps {
  * UI to actually create one — Contacts/Search only offered 1:1 "Message".
  */
 export function NewGroupModal({ isOpen, onClose }: NewGroupModalProps) {
+  const { t } = useLocale();
   const { data: contacts, isLoading } = useContacts();
   const createConversation = useCreateConversation();
   const router = useRouter();
@@ -47,24 +49,24 @@ export function NewGroupModal({ isOpen, onClose }: NewGroupModalProps) {
   const canCreate = selected.size >= 2 || (selected.size >= 1 && name.trim().length > 0);
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="New group" size="md">
+    <Modal isOpen={isOpen} onClose={handleClose} title={t("group.title")} size="md">
       <div className="flex flex-col gap-4">
         <Input
-          label="Group name"
-          placeholder="e.g. Launch Squad"
+          label={t("group.name")}
+          placeholder={t("group.namePlaceholder")}
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
 
         <div>
           <p className="text-sm font-medium text-text-secondary mb-2">
-            Add people {selected.size > 0 && `(${selected.size} selected)`}
+            {t("group.addPeople")} {selected.size > 0 && `(${t("group.selected", { count: selected.size })})`}
           </p>
           <div className="max-h-64 overflow-y-auto flex flex-col divide-y divide-border-subtle rounded-[var(--radius-md)] border border-border-default">
-            {isLoading && <p className="text-sm text-text-muted p-3">Loading contacts…</p>}
+            {isLoading && <p className="text-sm text-text-muted p-3">{t("group.loadingContacts")}</p>}
             {!isLoading && contacts?.length === 0 && (
               <p className="text-sm text-text-muted p-3">
-                No contacts yet — add some from Search first.
+                {t("group.noContacts")}
               </p>
             )}
             {contacts?.map((contact) => {
@@ -93,14 +95,14 @@ export function NewGroupModal({ isOpen, onClose }: NewGroupModalProps) {
           </div>
           {selected.size === 1 && !name.trim() && (
             <p className="text-xs text-text-muted mt-2">
-              With just one person, add a group name or select one more person.
+              {t("group.onePersonHelp")}
             </p>
           )}
         </div>
 
         <div className="flex justify-end gap-2 pt-1">
           <Button variant="secondary" onClick={handleClose}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             disabled={!canCreate}
@@ -117,7 +119,7 @@ export function NewGroupModal({ isOpen, onClose }: NewGroupModalProps) {
               )
             }
           >
-            Create group
+            {t("group.create")}
           </Button>
         </div>
       </div>

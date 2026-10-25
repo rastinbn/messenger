@@ -11,8 +11,10 @@ import { useConversations } from "@/hooks/useChat";
 import { useCurrentUser } from "@/hooks/useUsers";
 import { cn } from "@/lib/cn";
 import { useUiStore } from "@/stores/useUiStore";
+import { useLocale } from "@/components/providers/LocaleProvider";
 
 export function ConversationListPanel() {
+  const { t } = useLocale();
   const { data: conversations, isLoading } = useConversations();
   const { data: currentUser } = useCurrentUser();
   const params = useParams<{ conversationId?: string }>();
@@ -41,20 +43,20 @@ export function ConversationListPanel() {
     >
       <div className="p-3 border-b border-border-subtle">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="font-display text-lg">Chats</h1>
+          <h1 className="font-display text-lg">{t("nav.chats")}</h1>
           <button
             onClick={() => setNewGroupOpen(true)}
-            aria-label="New group"
+            aria-label={t("chat.newGroup")}
             className="h-8 w-8 flex items-center justify-center rounded-full text-text-muted hover:text-text-primary hover:bg-bg-hover text-lg"
           >
             +
           </button>
         </div>
         <Input
-          placeholder="Search conversations"
+          placeholder={t("chat.searchConversations")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          aria-label="Search conversations"
+          aria-label={t("chat.searchConversations")}
         />
       </div>
 
@@ -63,7 +65,7 @@ export function ConversationListPanel() {
           [...Array(6)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
 
         {!isLoading && filtered.length === 0 && (
-          <p className="text-center text-sm text-text-muted mt-8">No conversations found.</p>
+          <p className="text-center text-sm text-text-muted mt-8">{t("chat.noConversations")}</p>
         )}
 
         {!isLoading &&

@@ -8,19 +8,22 @@ import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { LanguageToggle, useLocale } from "@/components/providers/LocaleProvider";
 import { useLogin, useRequestMagicLink } from "@/hooks/useAuth";
 import type { LoginInput } from "@messenger/shared-types";
 
 export default function LoginPage() {
   const login = useLogin();
+  const { t } = useLocale();
   const [mode, setMode] = useState<"password" | "magic-link">("password");
 
   return (
     <main className="flex-1 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
-        <h1 className="font-display text-2xl mb-1">Welcome back</h1>
+        <div className="flex justify-end mb-5"><LanguageToggle /></div>
+        <h1 className="font-display text-2xl mb-1">{t("login.title")}</h1>
         <p className="text-text-secondary text-sm mb-6">
-          {mode === "password" ? "Log in to keep your conversations going." : "We'll email you a one-time login link."}
+          {mode === "password" ? t("login.description") : t("login.magicDescription")}
         </p>
 
         {mode === "password" ? <PasswordLoginForm login={login} /> : <MagicLinkForm />}
@@ -30,13 +33,13 @@ export default function LoginPage() {
           className="text-sm text-accent-signal hover:underline mt-4 block mx-auto"
           onClick={() => setMode(mode === "password" ? "magic-link" : "password")}
         >
-          {mode === "password" ? "Email me a login link instead" : "Log in with a password instead"}
+          {mode === "password" ? t("login.emailLink") : t("login.passwordInstead")}
         </button>
 
         <p className="text-sm text-text-muted mt-6 text-center">
-          New here?{" "}
+          {t("login.newHere")} {" "}
           <Link href="/register" className="text-accent-signal hover:underline">
-            Create an account
+            {t("landing.createAccount")}
           </Link>
         </p>
       </div>
@@ -45,6 +48,7 @@ export default function LoginPage() {
 }
 
 function PasswordLoginForm({ login }: { login: ReturnType<typeof useLogin> }) {
+  const { t } = useLocale();
   const {
     register,
     handleSubmit,
@@ -54,7 +58,7 @@ function PasswordLoginForm({ login }: { login: ReturnType<typeof useLogin> }) {
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit((data) => login.mutate(data))} noValidate>
       <Input
-        label="Email"
+        label={t("login.email")}
         type="email"
         autoComplete="email"
         placeholder="you@example.com"
@@ -62,7 +66,7 @@ function PasswordLoginForm({ login }: { login: ReturnType<typeof useLogin> }) {
         {...register("email")}
       />
       <Input
-        label="Password"
+        label={t("login.password")}
         type="password"
         autoComplete="current-password"
         placeholder="••••••••"
@@ -72,18 +76,19 @@ function PasswordLoginForm({ login }: { login: ReturnType<typeof useLogin> }) {
 
       {login.isError && (
         <p role="alert" className="text-sm text-danger">
-          Something went wrong. Please try again.
+          {t("login.error")}
         </p>
       )}
 
       <Button type="submit" isLoading={login.isPending} className="w-full mt-1">
-        Log in
+        {t("login.submit")}
       </Button>
     </form>
   );
 }
 
 function MagicLinkForm() {
+  const { t } = useLocale();
   const requestMagicLink = useRequestMagicLink();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
@@ -92,8 +97,7 @@ function MagicLinkForm() {
     return (
       <div className="text-center py-4">
         <p className="text-sm text-text-secondary">
-          If an account exists for <span className="text-text-primary">{email}</span>, a login link
-          is on its way. Check your inbox.
+          {t("login.magicSent", { email })}
         </p>
       </div>
     );
@@ -109,7 +113,7 @@ function MagicLinkForm() {
       noValidate
     >
       <Input
-        label="Email"
+        label={t("login.email")}
         type="email"
         autoComplete="email"
         placeholder="you@example.com"
@@ -118,7 +122,7 @@ function MagicLinkForm() {
         required
       />
       <Button type="submit" isLoading={requestMagicLink.isPending} className="w-full mt-1">
-        Send login link
+        {t("login.sendLink")}
       </Button>
     </form>
   );
