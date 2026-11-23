@@ -39,7 +39,7 @@ function emitMediaState(): void {
   if (!activeConversationId) return;
   getSocket()?.emit("call:media-state", {
     conversationId: activeConversationId,
-    audioEnabled: localAudioEnabled,
+    audioEnabled:+ localAudioEnabled,
     videoEnabled: localVideoEnabled
   });
 }
@@ -144,6 +144,7 @@ function teardownLocalCall(): void {
   peerNames.clear();
   useCallStore.getState().reset();
 }
+
 
 async function createAndOffer(
   conversationId: string,
