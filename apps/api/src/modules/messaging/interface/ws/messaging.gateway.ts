@@ -19,8 +19,10 @@ import { MessagingService } from '../../application/messaging.service';
 import {
   MESSAGE_CREATED_EVENT,
   MESSAGE_DELETED_EVENT,
+  MESSAGE_UPDATED_EVENT,
   type MessageCreatedEvent,
   type MessageDeletedEvent,
+  type MessageUpdatedEvent,
 } from '../../application/messaging.service';
 import { toMessageDto } from '../messages.mapper';
 
@@ -229,5 +231,13 @@ export class MessagingGateway
     this.server
       .to(conversationRoom(message.conversationId))
       .emit('message:deleted', toMessageDto(message));
+  }
+
+  @OnEvent(MESSAGE_UPDATED_EVENT)
+  handleMessageUpdated({ message }: MessageUpdatedEvent): void {
+    // Reactions (and any future in-place edit) replace the row for every viewer.
+    this.server
+      .to(conversationRoom(message.conversationId))
+      .emit('message:updated', toMessageDto(message));
   }
 }

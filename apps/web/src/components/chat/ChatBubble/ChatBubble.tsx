@@ -1,11 +1,22 @@
 "use client";
 
-import type { Message } from "@messenger/shared-types";
-import { Check, CheckCheck, CircleAlert, Clock, Ellipsis, Forward, type LucideIcon } from "lucide-react";
+import type { Message, MessageReaction } from "@messenger/shared-types";
+import {
+  Check,
+  CheckCheck,
+  CircleAlert,
+  Clock,
+  Ellipsis,
+  Forward,
+  SmilePlus,
+  type LucideIcon
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import { AudioCard } from "@/components/ui/AudioCard";
 import { ContextMenu } from "@/components/ui/ContextMenu";
 import { Dropdown, type DropdownItem } from "@/components/ui/Dropdown";
+import { EmojiPickerPlaceholder } from "@/components/ui/EmojiPicker";
 import { FileCard } from "@/components/ui/FileCard";
 import { ImageCard } from "@/components/ui/ImageCard";
 import { cn } from "@/lib/cn";
@@ -16,10 +27,15 @@ export interface ChatBubbleProps {
   message: Message;
   isOwn: boolean;
   senderName: string;
+  currentUserId: string;
   showSender?: boolean;
   onReply?: (message: Message) => void;
   onForward?: (message: Message) => void;
   onDelete?: (message: Message) => void;
+  /** Sends `null` when the user taps their own reaction again (toggle off). */
+  onReact?: (message: Message, emoji: string | null) => void;
+  /** Jumps to the quoted message when the reply preview is clicked. */
+  onJumpToMessage?: (messageId: string) => void;
 }
 
 const statusIcon: Record<Message["status"], LucideIcon> = {
@@ -30,20 +46,78 @@ const statusIcon: Record<Message["status"], LucideIcon> = {
   failed: CircleAlert
 };
 
+function ReactionChip({
+  reaction,
+  mine,
+  onToggle
+}: {
+  reaction: MessageReaction;
+  mine: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={mine}
+      aria-label={`${reaction.emoji} reaction, ${reaction.userIds.length} ${
+        reaction.userIds.length === 1 ? "person" : "people"
+      }${mine ? " (including you)" : ""}`}
+      className={cn(
+        "flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs leading-none transition-colors",
+        mine
+          ? "border-accent-signal bg-accent-signal/15 text-text-primary"
+          : "border-border-default bg-bg-elevated text-text-secondary hover:bg-bg-hover"
+      )}
+    >
+      <span aria-hidden>{reaction.emoji}</span>
+      <span className="font-mono text-[11px]">{reaction.userIds.length}</span>
+    </button>
+  );
+}
+
 export function ChatBubble({
   message,
   isOwn,
   senderName,
+  currentUserId,
   showSender,
   onReply,
   onForward,
-  onDelete
+  onDelete,
+  onReact,
+  onJumpToMessage
 }: ChatBubbleProps) {
   const openImageViewer = useUiStore((s) => s.openImageViewer);
   const openFilePreview = useUiStore((s) => s.openFilePreview);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
 
   const isDeleted = !!message.deletedAt;
   const quoted = message.replyTo;
+  const myReaction = message.reactions.find((r) => r.userIds.includes(currentUserId));
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const onOutside = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) setPickerOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPickerOpen(false);
+    };
+    document.addEventListener("mousedown", onOutside);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onOutside);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [pickerOpen]);
+
+  const toggleReaction = (emoji: string) => {
+    if (isDeleted) return;
+    setPickerOpen(false);
+    onReact?.(message, myReaction?.emoji === emoji ? null : emoji);
+  };
 
   // A tombstone has no content to act on — only its timestamp is meaningful.
   const items: DropdownItem[] = isDeleted
@@ -52,6 +126,7 @@ export function ChatBubble({
         ...(message.content
           ? [{ label: "Copy text", onSelect: () => navigator.clipboard.writeText(message.content) }]
           : []),
+        { label: "React", onSelect: () => setPickerOpen(true) },
         { label: "Reply", onSelect: () => onReply?.(message) },
         { label: "Forward", onSelect: () => onForward?.(message) },
         ...(isOwn ? [{ label: "Delete", onSelect: () => onDelete?.(message), danger: true }] : [])
@@ -61,7 +136,7 @@ export function ChatBubble({
     <ContextMenu items={items}>
       <div
         className={cn(
-          "group flex flex-col gap-1 max-w-[75%]",
+          "group relative flex flex-col gap-1 max-w-[75%]",
           isOwn ? "items-end ml-auto" : "items-start"
         )}
       >
@@ -74,9 +149,13 @@ export function ChatBubble({
         )}
 
         {quoted && (
-          <div
+          <button
+            type="button"
+            onClick={() => onJumpToMessage?.(quoted.id)}
+            title="Jump to original message"
             className={cn(
-              "max-w-full rounded-[var(--radius-sm)] border-l-2 px-2.5 py-1.5 text-xs",
+              "max-w-full rounded-[var(--radius-sm)] border-l-2 px-2.5 py-1.5 text-xs text-left",
+              onJumpToMessage && "cursor-pointer hover:brightness-125",
               isOwn
                 ? "border-white/50 bg-white/10 text-white/80"
                 : "border-accent-signal bg-bg-base text-text-secondary"
@@ -86,7 +165,7 @@ export function ChatBubble({
             <p className="truncate">
               {quoted.deletedAt ? "Message deleted" : quoted.content || "Attachment"}
             </p>
-          </div>
+          </button>
         )}
 
         {message.attachments.map((att) => {
@@ -144,6 +223,19 @@ export function ChatBubble({
           )
         )}
 
+        {!isDeleted && message.reactions.length > 0 && (
+          <div className={cn("flex flex-wrap gap-1 px-1", isOwn ? "justify-end" : "justify-start")}>
+            {message.reactions.map((reaction) => (
+              <ReactionChip
+                key={reaction.emoji}
+                reaction={reaction}
+                mine={reaction.userIds.includes(currentUserId)}
+                onToggle={() => toggleReaction(reaction.emoji)}
+              />
+            ))}
+          </div>
+        )}
+
         <div className="flex items-center gap-1 px-1">
           <span className="text-[11px] text-text-muted font-mono">
             {formatMessageTime(message.createdAt)}
@@ -163,6 +255,37 @@ export function ChatBubble({
               />
             );
           })()}
+
+          {!isDeleted && (
+            <div ref={pickerRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setPickerOpen((open) => !open)}
+                aria-label="Add reaction"
+                aria-expanded={pickerOpen}
+                className={cn(
+                  "flex h-6 w-6 items-center justify-center rounded-full text-text-muted",
+                  "hover:bg-bg-hover hover:text-text-primary",
+                  "opacity-60 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                )}
+              >
+                <SmilePlus className="h-4 w-4" strokeWidth={2} aria-hidden />
+              </button>
+              {pickerOpen && (
+                <div
+                  className={cn(
+                    "absolute bottom-full z-30 mb-2",
+                    isOwn ? "right-0" : "left-0"
+                  )}
+                >
+                  <EmojiPickerPlaceholder
+                    onSelect={toggleReaction}
+                    onClose={() => setPickerOpen(false)}
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           {items.length > 0 && (
             <Dropdown

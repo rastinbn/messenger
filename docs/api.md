@@ -56,6 +56,8 @@ Nested under conversations.
 | GET | `/v1/conversations/:conversationId/messages?cursor=` | Cursor-paginated (50/page), returned oldest-first per page |
 | POST | `/v1/conversations/:conversationId/messages` | Send a message (`content`, optional `attachmentIds`, optional `replyToId`) |
 | POST | `/v1/messages/:messageId/forward` | Copy a message into another conversation (`conversationId`). The copy is a normal message flagged `forwarded: true` with cloned attachments. |
+| POST | `/v1/messages/:messageId/reactions` | Add/replace your reaction (`emoji`, max 16 chars). Returns the message with reactions grouped by emoji. |
+| DELETE | `/v1/messages/:messageId/reactions` | Remove your reaction; returns the updated message. |
 | DELETE | `/v1/messages/:messageId` | Soft-delete one of **your own** messages. Returns the tombstone (`deletedAt` set, `content: ""`, no attachments); repeating it is a no-op. |
 
 Sending a message via REST triggers the exact same realtime broadcast as sending over the
@@ -66,6 +68,10 @@ Replies are stored on the message as `replyToId`; every read path embeds a compa
 `replyTo: { id, senderId, senderName, content, deletedAt } | null` quote so clients can render the
 reference without a second request. Deleting is a soft delete so replies pointing at the message and
 cursor pagination both stay valid; deletions broadcast `message:deleted` (see the socket doc).
+
+Reactions are one emoji per user per message: reacting again with a different emoji replaces the
+old one, and the API returns them grouped as `reactions: [{ emoji, userIds }]`. In-place updates
+(including reactions) broadcast `message:updated` with the full replacement row.
 
 ## Notifications
 

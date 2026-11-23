@@ -17,6 +17,7 @@ import {
   useForwardMessage,
   useMarkRead,
   useMessages,
+  useReactToMessage,
   useSendMessage,
   useTypingIndicator
 } from "@/hooks/useChat";
@@ -36,12 +37,17 @@ export default function ChatWindowPage() {
   const { chat } = useServices();
   const { data: conversation, isLoading: conversationLoading, error: conversationError } =
     useConversation(conversationId);
-  const { data: messagesData, isLoading: messagesLoading } = useMessages(conversationId);
+  const {
+    data: messagesData,
+    isLoading: messagesLoading,
+    ensureMessageLoaded
+  } = useMessages(conversationId);
   const { data: typingMap } = useTypingIndicator(conversationId);
   const { data: currentUser } = useCurrentUser();
   const sendMessage = useSendMessage();
   const deleteMessage = useDeleteMessage();
   const forwardMessage = useForwardMessage();
+  const reactToMessage = useReactToMessage();
   const markRead = useMarkRead();
   const background = useChatBackground(conversationId);
 
@@ -124,6 +130,10 @@ export default function ChatWindowPage() {
         onReply={setReplyTo}
         onForward={setForwarding}
         onDelete={setPendingDelete}
+        onReact={(message, emoji) =>
+          reactToMessage.mutate({ messageId: message.id, emoji })
+        }
+        ensureMessageLoaded={ensureMessageLoaded}
       />
 
       <MessageComposer

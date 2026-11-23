@@ -20,6 +20,12 @@ export interface MessageReplyPreviewEntity {
   deletedAt: Date | null;
 }
 
+/** Reactions grouped by emoji — one reaction per user per message. */
+export interface MessageReactionEntity {
+  emoji: string;
+  userIds: string[];
+}
+
 export interface MessageEntity {
   id: string;
   conversationId: string;
@@ -33,4 +39,5 @@ export interface MessageEntity {
   forwarded: boolean;
   replyTo: MessageReplyPreviewEntity | null;
   attachments: AttachmentEntity[];
+  reactions: MessageReactionEntity[];
 }

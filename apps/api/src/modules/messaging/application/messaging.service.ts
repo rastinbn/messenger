@@ -14,12 +14,18 @@ import {
 
 export const MESSAGE_CREATED_EVENT = "message.created";
 export const MESSAGE_DELETED_EVENT = "message.deleted";
+export const MESSAGE_UPDATED_EVENT = "message.updated";
 
 export interface MessageCreatedEvent {
   message: MessageEntity;
 }
 
 export interface MessageDeletedEvent {
+  message: MessageEntity;
+}
+
+/** Reactions (and any other in-place edit) fan out through this event. */
+export interface MessageUpdatedEvent {
   message: MessageEntity;
 }
 
@@ -131,6 +137,37 @@ export class MessagingService {
     await this.notifyOtherParticipants(params.targetConversationId, params.userId, forwarded);
 
     return forwarded;
+  }
+
+  /**
+   * Adds/replaces the caller's emoji reaction and broadcasts the updated message.
+   * Reacting is idempotent per user: a second emoji replaces the first.
+   */
+  async reactToMessage(params: {
+    messageId: string;
+    userId: string;
+    emoji: string;
+  }): Promise<MessageEntity> {
+    const message = await this.messages.findById(params.messageId);
+    if (!message || message.deletedAt) throw new MessageNotFoundError();
+
+    await this.conversationsService.assertParticipant(message.conversationId, params.userId);
+
+    const updated = await this.messages.setReaction(message.id, params.userId, params.emoji);
+    this.events.emit(MESSAGE_UPDATED_EVENT, { message: updated } satisfies MessageUpdatedEvent);
+    return updated;
+  }
+
+  /** Removes the caller's reaction (no-op if they had none). */
+  async removeReaction(params: { messageId: string; userId: string }): Promise<MessageEntity> {
+    const message = await this.messages.findById(params.messageId);
+    if (!message || message.deletedAt) throw new MessageNotFoundError();
+
+    await this.conversationsService.assertParticipant(message.conversationId, params.userId);
+
+    const updated = await this.messages.clearReaction(message.id, params.userId);
+    this.events.emit(MESSAGE_UPDATED_EVENT, { message: updated } satisfies MessageUpdatedEvent);
+    return updated;
   }
 
   private async notifyOtherParticipants(

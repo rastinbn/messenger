@@ -27,6 +27,17 @@ export const MessageReplyPreviewSchema = z.object({
 });
 export type MessageReplyPreview = z.infer<typeof MessageReplyPreviewSchema>;
 
+/**
+ * One emoji and everyone who reacted with it. The API groups reactions this way
+ * because the UI only ever needs counts plus "did I react?", and it keeps the
+ * payload the same for every viewer (each client decides `mine` locally).
+ */
+export const MessageReactionSchema = z.object({
+  emoji: z.string().min(1).max(16),
+  userIds: z.array(z.string().uuid())
+});
+export type MessageReaction = z.infer<typeof MessageReactionSchema>;
+
 export const MessageSchema = z.object({
   id: z.string().uuid(),
   conversationId: z.string().uuid(),
@@ -41,7 +52,9 @@ export const MessageSchema = z.object({
   /** True when the message was forwarded rather than composed here. */
   forwarded: z.boolean().default(false),
   /** Set for soft-deleted messages; content/attachments are cleared for everyone. */
-  deletedAt: z.string().datetime().nullable().default(null)
+  deletedAt: z.string().datetime().nullable().default(null),
+  /** Grouped emoji reactions; one reaction per user per message. */
+  reactions: z.array(MessageReactionSchema).default([])
 });
 export type Message = z.infer<typeof MessageSchema>;
 

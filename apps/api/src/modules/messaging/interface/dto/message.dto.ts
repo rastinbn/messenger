@@ -19,6 +19,11 @@ export class MessageReplyPreviewDto {
   @ApiProperty({ nullable: true }) deletedAt!: Date | null;
 }
 
+export class MessageReactionDto {
+  @ApiProperty() emoji!: string;
+  @ApiProperty({ type: [String] }) userIds!: string[];
+}
+
 export class MessageDto {
   @ApiProperty() id!: string;
   @ApiProperty() conversationId!: string;
@@ -33,6 +38,7 @@ export class MessageDto {
   replyTo!: MessageReplyPreviewDto | null;
   @ApiProperty() forwarded!: boolean;
   @ApiProperty({ nullable: true }) deletedAt!: Date | null;
+  @ApiProperty({ type: [MessageReactionDto] }) reactions!: MessageReactionDto[];
 }
 
 export class MessagePageDto {

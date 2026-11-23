@@ -2,7 +2,7 @@
 
 import type { Message, SendMessageInput } from "@messenger/shared-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 
 import { useServices } from "@/components/providers/ServiceProvider";
 import { ApiError } from "@/lib/api/http-client";
@@ -13,6 +13,14 @@ function appendMessageDeduped(old: MessagesPage | undefined, message: Message): 
   if (!old) return { messages: [message], nextCursor: null };
   if (old.messages.some((m) => m.id === message.id)) return old;
   return { ...old, messages: [...old.messages, message] };
+}
+
+function replaceMessage(old: MessagesPage | undefined, message: Message): MessagesPage | undefined {
+  if (!old) return old;
+  return {
+    ...old,
+    messages: old.messages.map((m) => (m.id === message.id ? message : m))
+  };
 }
 
 /**
@@ -51,6 +59,38 @@ export function useMessages(conversationId: string | null) {
   const { chat } = useServices();
   const queryClient = useQueryClient();
 
+  /**
+   * Walks older pages until `messageId` is in the cache. Reply quotes can point
+   * past the first page, so clicking one must be able to backfill history.
+   */
+  const ensureMessageLoaded = useCallback(
+    async (messageId: string): Promise<boolean> => {
+      if (!conversationId) return false;
+      const key = ["messages", conversationId];
+      const cached = queryClient.getQueryData<MessagesPage>(key);
+      if (cached?.messages.some((m) => m.id === messageId)) return true;
+
+      let cursor = cached?.nextCursor ?? null;
+      // A runaway cursor would mean a broken API contract; cap the walk so a
+      // click can never spin forever.
+      for (let pages = 0; pages < 40 && cursor; pages++) {
+        const older = await chat.getMessages(conversationId, cursor);
+        queryClient.setQueryData<MessagesPage>(key, (old) => {
+          if (!old) return older;
+          const known = new Set(old.messages.map((m) => m.id));
+          return {
+            messages: [...older.messages.filter((m) => !known.has(m.id)), ...old.messages],
+            nextCursor: older.nextCursor
+          };
+        });
+        if (older.messages.some((m) => m.id === messageId)) return true;
+        cursor = older.nextCursor;
+      }
+      return false;
+    },
+    [chat, conversationId, queryClient]
+  );
+
   const query = useQuery({
     queryKey: ["messages", conversationId],
     queryFn: () => chat.getMessages(conversationId!),
@@ -70,18 +110,23 @@ export function useMessages(conversationId: string | null) {
     // open clients can swap the row in place without refetching the thread.
     const unsubscribeDeleted = chat.onMessageDeleted(conversationId, (message) => {
       queryClient.setQueryData<MessagesPage>(["messages", conversationId], (old) =>
-        old
-          ? { ...old, messages: old.messages.map((m) => (m.id === message.id ? message : m)) }
-          : old
+        replaceMessage(old, message)
+      );
+    });
+    // Reactions arrive as a full replacement row over `message:updated`.
+    const unsubscribeUpdated = chat.onMessageUpdated(conversationId, (message) => {
+      queryClient.setQueryData<MessagesPage>(["messages", conversationId], (old) =>
+        replaceMessage(old, message)
       );
     });
     return () => {
       unsubscribe();
       unsubscribeDeleted();
+      unsubscribeUpdated();
     };
   }, [conversationId, chat, queryClient]);
 
-  return query;
+  return { ...query, ensureMessageLoaded };
 }
 
 export function useTypingIndicator(conversationId: string | null) {
@@ -151,6 +196,28 @@ export function useForwardMessage() {
       );
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
     }
+  });
+}
+
+/**
+ * One mutation for both directions: `emoji: null` removes the caller's current
+ * reaction, any other value adds/replaces it. The socket echo is idempotent —
+ * both paths replace the same row by id.
+ */
+export function useReactToMessage() {
+  const { chat } = useServices();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { messageId: string; emoji: string | null }) =>
+      input.emoji === null
+        ? chat.removeReaction(input.messageId)
+        : chat.reactToMessage(input.messageId, input.emoji),
+    onSuccess: (message) => {
+      queryClient.setQueryData<MessagesPage>(["messages", message.conversationId], (old) =>
+        replaceMessage(old, message)
+      );
+    },
+    retry: false
   });
 }
 

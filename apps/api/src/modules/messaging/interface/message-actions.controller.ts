@@ -16,6 +16,7 @@ import { MessageNotFoundError, MessageNotOwnedError } from "../domain/errors";
 
 import { ForwardMessageDto } from "./dto/forward-message.dto";
 import { MessageDto } from "./dto/message.dto";
+import { ReactToMessageDto } from "./dto/react-to-message.dto";
 import { toMessageDto } from "./messages.mapper";
 
 /**
@@ -62,6 +63,44 @@ export class MessageActionsController {
         targetConversationId: dto.conversationId
       });
       return toMessageDto(forwarded);
+    } catch (err) {
+      if (err instanceof MessageNotFoundError) throw new NotFoundException(err.message);
+      throw err;
+    }
+  }
+
+  @Post(":messageId/reactions")
+  @HttpCode(200)
+  @ApiOperation({ summary: "React to a message (replaces your previous reaction)" })
+  @ApiOkResponse({ type: MessageDto })
+  async react(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("messageId") messageId: string,
+    @Body() dto: ReactToMessageDto
+  ): Promise<MessageDto> {
+    try {
+      const message = await this.messagingService.reactToMessage({
+        messageId,
+        userId: user.id,
+        emoji: dto.emoji
+      });
+      return toMessageDto(message);
+    } catch (err) {
+      if (err instanceof MessageNotFoundError) throw new NotFoundException(err.message);
+      throw err;
+    }
+  }
+
+  @Delete(":messageId/reactions")
+  @ApiOperation({ summary: "Remove your reaction from a message" })
+  @ApiOkResponse({ type: MessageDto })
+  async unreact(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("messageId") messageId: string
+  ): Promise<MessageDto> {
+    try {
+      const message = await this.messagingService.removeReaction({ messageId, userId: user.id });
+      return toMessageDto(message);
     } catch (err) {
       if (err instanceof MessageNotFoundError) throw new NotFoundException(err.message);
       throw err;

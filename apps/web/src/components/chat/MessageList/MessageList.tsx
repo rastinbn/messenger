@@ -25,6 +25,9 @@ export interface MessageListProps {
   onReply?: (message: Message) => void;
   onForward?: (message: Message) => void;
   onDelete?: (message: Message) => void;
+  onReact?: (message: Message, emoji: string | null) => void;
+  /** Backfills older pages if a quoted message is outside the loaded window. */
+  ensureMessageLoaded?: (messageId: string) => Promise<boolean>;
 }
 
 /** Distance from the bottom (px) that still counts as "following the thread". */
@@ -44,7 +47,9 @@ export function MessageList({
   background = "default",
   onReply,
   onForward,
-  onDelete
+  onDelete,
+  onReact,
+  ensureMessageLoaded
 }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -60,6 +65,51 @@ export function MessageList({
   const isAtBottomRef = useRef(true);
   const currentConversationRef = useRef(conversationId);
   const pendingInstantScrollRef = useRef(true);
+  const pendingJumpRef = useRef<string | null>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+
+  // A reply quote can point at a message in an older page. Load it if needed,
+  // then scroll it into view and flash it so the eye finds it immediately.
+  const jumpToMessage = useCallback(
+    async (messageId: string) => {
+      // Set before any cache update: backfilling older pages changes
+      // messages.length, which would otherwise auto-scroll to the bottom.
+      pendingJumpRef.current = messageId;
+      const loaded = ensureMessageLoaded
+        ? await ensureMessageLoaded(messageId)
+        : !!contentRef.current?.querySelector(`[data-message-id="${messageId}"]`);
+      if (!loaded) {
+        pendingJumpRef.current = null;
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        const el = contentRef.current?.querySelector<HTMLElement>(
+          `[data-message-id="${messageId}"]`
+        );
+        if (!el) {
+          pendingJumpRef.current = null;
+          return;
+        }
+        isAtBottomRef.current = false;
+        setIsAtBottom(false);
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        setHighlightedMessageId(messageId);
+        if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+        highlightTimerRef.current = setTimeout(() => setHighlightedMessageId(null), 1600);
+        pendingJumpRef.current = null;
+      });
+    },
+    [ensureMessageLoaded]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+    };
+  }, []);
 
   const scrollToBottom = useCallback(
     (behavior: ScrollBehavior) => {
@@ -86,6 +136,9 @@ export function MessageList({
   // with it off, follow along only while the reader is already at the bottom and
   // otherwise surface the "jump to latest" affordance instead of yanking them.
   useEffect(() => {
+    // Loading an older page for a reply jump must not yank the reader back down.
+    if (pendingJumpRef.current) return;
+
     const behavior: ScrollBehavior = pendingInstantScrollRef.current ? "auto" : "smooth";
     pendingInstantScrollRef.current = false;
 
@@ -103,7 +156,7 @@ export function MessageList({
     if (!el || !content || typeof ResizeObserver === "undefined") return;
 
     const observer = new ResizeObserver(() => {
-      if (keepLastMessageVisible || isAtBottomRef.current) {
+      if (!pendingJumpRef.current && (keepLastMessageVisible || isAtBottomRef.current)) {
         el.scrollTop = el.scrollHeight;
       }
     });
@@ -181,7 +234,15 @@ export function MessageList({
       >
         <div ref={contentRef} className="flex flex-col gap-3">
           {rows.map(({ message, showDateDivider, isOwn, showSender }) => (
-            <div key={message.id} style={{ animation: "messageRise 160ms ease-out" }}>
+            <div
+              key={message.id}
+              data-message-id={message.id}
+              className={cn(
+                "rounded-[var(--radius-lg)] transition-colors duration-300",
+                highlightedMessageId === message.id && "bg-accent-signal/15 ring-2 ring-accent-signal/60"
+              )}
+              style={{ animation: "messageRise 160ms ease-out" }}
+            >
               {showDateDivider && (
                 <div className="flex items-center gap-3 my-2" role="separator">
                   <div className="h-px flex-1 bg-border-subtle" />
@@ -195,10 +256,13 @@ export function MessageList({
                 message={message}
                 isOwn={isOwn}
                 senderName={nameFor(message.senderId)}
+                currentUserId={currentUserId}
                 showSender={showSender}
                 onReply={onReply}
                 onForward={onForward}
                 onDelete={onDelete}
+                onReact={onReact}
+                onJumpToMessage={jumpToMessage}
               />
             </div>
           ))}

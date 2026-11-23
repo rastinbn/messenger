@@ -61,12 +61,18 @@ export interface ChatService {
   deleteMessage(messageId: string): Promise<Message>;
   /** Copies a message into another conversation, marked as forwarded. */
   forwardMessage(input: { messageId: string; conversationId: string }): Promise<Message>;
+  /** Adds/replaces the current user's emoji reaction. */
+  reactToMessage(messageId: string, emoji: string): Promise<Message>;
+  /** Removes the current user's reaction. */
+  removeReaction(messageId: string): Promise<Message>;
   markRead(conversationId: string): Promise<void>;
   createConversation(participantIds: string[], name?: string): Promise<Conversation>;
   setTyping(conversationId: string, isTyping: boolean): void;
   onTyping(conversationId: string, cb: (userId: string, isTyping: boolean) => void): () => void;
   onMessage(conversationId: string, cb: (message: Message) => void): () => void;
   onMessageDeleted(conversationId: string, cb: (message: Message) => void): () => void;
+  /** Fires for in-place edits (reactions, …) so open threads update live. */
+  onMessageUpdated(conversationId: string, cb: (message: Message) => void): () => void;
 }
 
 export interface NotificationService {

@@ -17,6 +17,7 @@ type TypingListener = (userId: string, isTyping: boolean) => void;
 
 const messageListeners = new Map<string, Set<MessageListener>>();
 const deletedListeners = new Map<string, Set<MessageListener>>();
+const updatedListeners = new Map<string, Set<MessageListener>>();
 const typingListeners = new Map<string, Set<TypingListener>>();
 
 function emitMessage(conversationId: string, message: Message) {
@@ -25,6 +26,28 @@ function emitMessage(conversationId: string, message: Message) {
 
 function emitDeleted(conversationId: string, message: Message) {
   deletedListeners.get(conversationId)?.forEach((cb) => cb(message));
+}
+
+function emitUpdated(conversationId: string, message: Message) {
+  updatedListeners.get(conversationId)?.forEach((cb) => cb(message));
+}
+
+/** One emoji per user: changing a reaction removes the old group if it empties. */
+function withReaction(message: Message, userId: string, emoji: string | null): Message {
+  const groups = message.reactions
+    .map((group) => ({
+      emoji: group.emoji,
+      userIds: group.userIds.filter((id) => id !== userId)
+    }))
+    .filter((group) => group.userIds.length > 0);
+
+  if (emoji) {
+    const existing = groups.find((group) => group.emoji === emoji);
+    if (existing) existing.userIds.push(userId);
+    else groups.push({ emoji, userIds: [userId] });
+  }
+
+  return { ...message, reactions: groups };
 }
 
 function emitTyping(conversationId: string, userId: string, isTyping: boolean) {
@@ -98,7 +121,8 @@ export class MockChatService implements ChatService {
           }
         : null,
       forwarded: false,
-      deletedAt: null
+      deletedAt: null,
+      reactions: []
     };
     messagesByConversation[input.conversationId].push(message);
 
@@ -129,7 +153,8 @@ export class MockChatService implements ChatService {
             createdAt: new Date().toISOString(),
             replyTo: null,
             forwarded: false,
-            deletedAt: null
+            deletedAt: null,
+            reactions: []
           };
           messagesByConversation[input.conversationId].push(reply);
           if (conv) {
@@ -178,7 +203,9 @@ export class MockChatService implements ChatService {
       forwarded: true,
       replyTo: null,
       createdAt: new Date().toISOString(),
-      status: "sent"
+      status: "sent",
+      // Reactions belong to the original message, not to the copy.
+      reactions: []
     };
     if (!messagesByConversation[input.conversationId]) {
       messagesByConversation[input.conversationId] = [];
@@ -186,6 +213,33 @@ export class MockChatService implements ChatService {
     messagesByConversation[input.conversationId].push(forwarded);
     emitMessage(input.conversationId, forwarded);
     return forwarded;
+  }
+
+  async reactToMessage(messageId: string, emoji: string): Promise<Message> {
+    return this.reactToMessageInternal(messageId, emoji);
+  }
+
+  async removeReaction(messageId: string): Promise<Message> {
+    return this.reactToMessageInternal(messageId, null);
+  }
+
+  private async reactToMessageInternal(messageId: string, emoji: string | null): Promise<Message> {
+    await delay(120);
+    const found = this.findMessage(messageId);
+    if (!found) throw new Error("Message not found.");
+
+    const updated = withReaction(found.message, CURRENT_USER_ID, emoji);
+    found.list[found.index] = updated;
+    emitUpdated(found.conversationId, updated);
+    return updated;
+  }
+
+  private findMessage(messageId: string) {
+    for (const [conversationId, list] of Object.entries(messagesByConversation)) {
+      const index = list.findIndex((m) => m.id === messageId);
+      if (index !== -1) return { conversationId, list, index, message: list[index] };
+    }
+    return null;
   }
 
   async markRead(conversationId: string): Promise<void> {
@@ -236,5 +290,11 @@ export class MockChatService implements ChatService {
     if (!deletedListeners.has(conversationId)) deletedListeners.set(conversationId, new Set());
     deletedListeners.get(conversationId)!.add(cb);
     return () => deletedListeners.get(conversationId)?.delete(cb);
+  }
+
+  onMessageUpdated(conversationId: string, cb: MessageListener): () => void {
+    if (!updatedListeners.has(conversationId)) updatedListeners.set(conversationId, new Set());
+    updatedListeners.get(conversationId)!.add(cb);
+    return () => updatedListeners.get(conversationId)?.delete(cb);
   }
 }

@@ -53,6 +53,17 @@ export class HttpChatService implements ChatService {
     });
   }
 
+  async reactToMessage(messageId: string, emoji: string): Promise<Message> {
+    return apiFetch<Message>(`/v1/messages/${messageId}/reactions`, {
+      method: "POST",
+      body: { emoji }
+    });
+  }
+
+  async removeReaction(messageId: string): Promise<Message> {
+    return apiFetch<Message>(`/v1/messages/${messageId}/reactions`, { method: "DELETE" });
+  }
+
   async markRead(conversationId: string): Promise<void> {
     await apiFetch(`/v1/conversations/${conversationId}/read`, { method: "PUT" });
   }
@@ -100,5 +111,16 @@ export class HttpChatService implements ChatService {
     };
     socket.on("message:deleted", handler);
     return () => socket.off("message:deleted", handler);
+  }
+
+  onMessageUpdated(conversationId: string, cb: (message: Message) => void): () => void {
+    const socket = getSocket();
+    if (!socket) return () => {};
+
+    const handler = (message: Message) => {
+      if (message.conversationId === conversationId) cb(message);
+    };
+    socket.on("message:updated", handler);
+    return () => socket.off("message:updated", handler);
   }
 }

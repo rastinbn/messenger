@@ -27,11 +27,20 @@ const messageInclude = Prisma.validator<Prisma.MessageInclude>()({
       sender: { select: { displayName: true } },
     },
   },
+  reactions: { select: { emoji: true, userId: true }, orderBy: { createdAt: 'asc' } },
 });
 
 type MessageRow = Prisma.MessageGetPayload<{ include: typeof messageInclude }>;
 
 function toEntity(row: MessageRow): MessageEntity {
+  // Group reactions by emoji: the UI only needs counts and "did I react?".
+  const byEmoji = new Map<string, string[]>();
+  for (const reaction of row.reactions) {
+    const users = byEmoji.get(reaction.emoji) ?? [];
+    users.push(reaction.userId);
+    byEmoji.set(reaction.emoji, users);
+  }
+
   return {
     id: row.id,
     conversationId: row.conversationId,
@@ -61,6 +70,7 @@ function toEntity(row: MessageRow): MessageEntity {
       width: a.width,
       height: a.height,
     })),
+    reactions: [...byEmoji.entries()].map(([emoji, userIds]) => ({ emoji, userIds })),
   };
 }
 
@@ -148,6 +158,31 @@ export class PrismaMessageRepository implements MessageRepositoryPort {
         include: messageInclude,
       }),
     ]);
+    return toEntity(row);
+  }
+
+  async setReaction(messageId: string, userId: string, emoji: string): Promise<MessageEntity> {
+    // One reaction per user per message: reacting again replaces the emoji.
+    await this.prisma.messageReaction.upsert({
+      where: { messageId_userId: { messageId, userId } },
+      create: { messageId, userId, emoji },
+      update: { emoji },
+    });
+
+    const row = await this.prisma.message.findUniqueOrThrow({
+      where: { id: messageId },
+      include: messageInclude,
+    });
+    return toEntity(row);
+  }
+
+  async clearReaction(messageId: string, userId: string): Promise<MessageEntity> {
+    await this.prisma.messageReaction.deleteMany({ where: { messageId, userId } });
+
+    const row = await this.prisma.message.findUniqueOrThrow({
+      where: { id: messageId },
+      include: messageInclude,
+    });
     return toEntity(row);
   }
 

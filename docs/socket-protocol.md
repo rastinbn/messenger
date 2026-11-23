@@ -87,6 +87,18 @@ whole room, including the author's other tabs, so nobody needs to refetch the th
 MessageDto // content: "", attachments: [], deletedAt: <ISO timestamp>
 ```
 
+## In-place message updates (reactions)
+
+Reaction changes go through REST (`POST`/`DELETE /v1/messages/:messageId/reactions`) and the service
+broadcasts the full updated message to the conversation room, including the reacting client's other
+tabs. The client mutation also writes the returned row into its cache; both paths replace by id, so
+the duplicate delivery is harmless.
+
+**Server → client(s in that conversation room):** `message:updated`
+```ts
+MessageDto // same shape as REST, with the new `reactions: [{ emoji, userIds }]`
+```
+
 ## Read receipts
 
 **Client → server:** `message:read`

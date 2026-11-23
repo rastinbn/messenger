@@ -41,5 +41,9 @@ export interface MessageRepositoryPort {
   ): Promise<MessagePage>;
   /** Clears content/attachments and stamps deletedAt; returns the tombstone. */
   softDelete(messageId: string): Promise<MessageEntity>;
+  /** Adds or replaces this user's reaction, returning the updated message. */
+  setReaction(messageId: string, userId: string, emoji: string): Promise<MessageEntity>;
+  /** Removes this user's reaction, returning the updated message. */
+  clearReaction(messageId: string, userId: string): Promise<MessageEntity>;
   touchConversation(conversationId: string): Promise<void>;
 }

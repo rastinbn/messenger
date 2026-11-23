@@ -79,6 +79,7 @@ createdAt     DateTime   @default(now())
   refreshTokens        RefreshToken[]
   conversations        ConversationParticipant[]
   messages              Message[]
+  reactions             MessageReaction[]
   notifications         Notification[]
   attachmentsUploaded   Attachment[]
 
@@ -171,10 +172,26 @@ model Message {
   deletedAt DateTime?
 
   attachments Attachment[]
+  reactions   MessageReaction[]
 
   @@index([conversationId, createdAt])
   @@index([replyToId])
   @@map("messages")
+}
+
+/// One emoji per user per message (reacting again replaces the previous emoji).
+model MessageReaction {
+  id        String   @id @default(uuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emoji     String
+  createdAt DateTime @default(now())
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@map("message_reactions")
 }
 
 model Attachment {

@@ -64,7 +64,10 @@ export const FIXTURE_CONVERSATIONS: Conversation[] = [
 
 // Fixture messages predate replies/forwards, so the new fields are filled in
 // here instead of being repeated on every literal below.
-const BASE_MESSAGES: Record<string, Omit<Message, "replyTo" | "forwarded" | "deletedAt">[]> = {
+const BASE_MESSAGES: Record<
+  string,
+  Omit<Message, "replyTo" | "forwarded" | "deletedAt" | "reactions">[]
+> = {
   "c-1": [
     {
       id: "m-1-1",
@@ -180,7 +183,13 @@ const BASE_MESSAGES: Record<string, Omit<Message, "replyTo" | "forwarded" | "del
 export const FIXTURE_MESSAGES: Record<string, Message[]> = Object.fromEntries(
   Object.entries(BASE_MESSAGES).map(([conversationId, messages]) => [
     conversationId,
-    messages.map((message) => ({ replyTo: null, forwarded: false, deletedAt: null, ...message }))
+    messages.map((message) => ({
+      replyTo: null,
+      forwarded: false,
+      deletedAt: null,
+      reactions: [],
+      ...message
+    }))
   ])
 );
 

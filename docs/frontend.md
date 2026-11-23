@@ -138,6 +138,16 @@ with `AudioCard` (play/pause, seek, elapsed/total duration) whenever the mime ty
 `audio/mp4`, `audio/mpeg`, `audio/wav`, `audio/x-m4a`), and the conversation list previews such a
 message as "🎤 Voice message".
 
+## Reactions & reply navigation
+
+`ChatBubble` shows grouped reaction chips under a message; clicking your own chip removes the
+reaction, clicking someone else's replaces it, and the smiley button (or context-menu **React**)
+opens the quick reaction grid. `useReactToMessage` writes the REST result into the TanStack Query
+cache, while `message:updated` over the socket covers other clients and tabs.
+
+The quoted preview above a reply is a button: clicking it backfills older pages if needed
+(`ensureMessageLoaded`), scrolls the original message into view and flashes it briefly.
+
 ## Known simplifications
 
 - Emoji picker is a placeholder (quick-reaction grid) per the original component spec — a full
